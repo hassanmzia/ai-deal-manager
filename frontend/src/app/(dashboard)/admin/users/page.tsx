@@ -2,18 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/auth";
-import { getUsers, User } from "@/services/users";
+import { getUsers, createUser, User } from "@/services/users";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Edit2, Trash2, Search } from "lucide-react";
+import { Loader2, Plus, Edit2, Trash2, Search, X } from "lucide-react";
 
 const ROLES = [
   { value: "admin", label: "Admin" },
   { value: "executive", label: "Executive" },
   { value: "capture_manager", label: "Capture Manager" },
   { value: "proposal_manager", label: "Proposal Manager" },
+  { value: "pricing_manager", label: "Pricing Manager" },
+  { value: "writer", label: "Writer" },
+  { value: "reviewer", label: "Reviewer" },
+  { value: "contracts_manager", label: "Contracts Manager" },
   { value: "viewer", label: "Viewer" },
-  { value: "user", label: "User" },
 ];
 
 export default function AdminUsersPage() {
@@ -24,6 +27,17 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+    password_confirm: "",
+    first_name: "",
+    last_name: "",
+    role: "viewer" as const,
+  });
 
   // Check if user is admin
   useEffect(() => {
@@ -77,6 +91,62 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleOpenModal = () => {
+    setSelectedUser(null);
+    setFormData({
+      username: "",
+      email: "",
+      password: "",
+      password_confirm: "",
+      first_name: "",
+      last_name: "",
+      role: "viewer",
+    });
+    setFormError(null);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedUser(null);
+    setFormError(null);
+  };
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+
+    if (!formData.username || !formData.email || !formData.password) {
+      setFormError("Username, email, and password are required");
+      return;
+    }
+
+    if (formData.password !== formData.password_confirm) {
+      setFormError("Passwords do not match");
+      return;
+    }
+
+    try {
+      setFormLoading(true);
+      const newUser = await createUser(formData);
+      setUsers([...users, newUser]);
+      handleCloseModal();
+    } catch (err: any) {
+      const message = err?.response?.data?.detail || err?.message || "Failed to create user";
+      setFormError(message);
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
   if (error && !user) {
     return (
       <div className="p-6">
@@ -97,7 +167,7 @@ export default function AdminUsersPage() {
             Manage user accounts and roles
           </p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
+        <Button onClick={handleOpenModal}>
           <Plus className="mr-2 h-4 w-4" />
           Add User
         </Button>
@@ -209,16 +279,135 @@ export default function AdminUsersPage() {
         </CardContent>
       </Card>
 
-      {/* Note about backend support */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="pt-6">
-          <p className="text-sm text-blue-900">
-            <strong>Note:</strong> User creation, role updates, and deletion require backend API endpoints.
-            Currently, the backend supports listing users and viewing user details. Contact your administrator
-            to implement user management endpoints in the backend.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Create User Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>{selectedUser ? "Edit User" : "Create New User"}</CardTitle>
+              <button
+                onClick={handleCloseModal}
+                className="p-1 hover:bg-muted rounded"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </CardHeader>
+            <CardContent>
+              {formError && (
+                <div className="mb-4 p-3 bg-red-100 text-red-800 rounded text-sm">
+                  {formError}
+                </div>
+              )}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Username</label>
+                  <input
+                    type="text"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">First Name</label>
+                  <input
+                    type="text"
+                    name="first_name"
+                    value={formData.first_name}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    name="last_name"
+                    value={formData.last_name}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Role</label>
+                  <select
+                    name="role"
+                    value={formData.role}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                  >
+                    {ROLES.map((role) => (
+                      <option key={role.value} value={role.value}>
+                        {role.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Password</label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Confirm Password</label>
+                  <input
+                    type="password"
+                    name="password_confirm"
+                    value={formData.password_confirm}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                    required
+                  />
+                </div>
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCloseModal}
+                    className="flex-1"
+                    disabled={formLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1"
+                    disabled={formLoading}
+                  >
+                    {formLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Create User"
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

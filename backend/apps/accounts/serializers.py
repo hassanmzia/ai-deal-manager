@@ -86,6 +86,59 @@ class RegisterSerializer(serializers.Serializer):
         return user
 
 
+class UserCreateSerializer(serializers.ModelSerializer):
+    """Serializer for admin to create users with specified roles."""
+
+    password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    password_confirm = serializers.CharField(
+        write_only=True, style={"input_type": "password"}
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "username",
+            "email",
+            "password",
+            "password_confirm",
+            "first_name",
+            "last_name",
+            "role",
+        ]
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("A user with this username already exists.")
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs.pop("password_confirm"):
+            raise serializers.ValidationError(
+                {"password_confirm": "Passwords do not match."}
+            )
+        return attrs
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data["username"],
+            email=validated_data["email"],
+            password=validated_data["password"],
+            first_name=validated_data.get("first_name", ""),
+            last_name=validated_data.get("last_name", ""),
+            role=validated_data.get("role", "viewer"),
+        )
+        return user
+
+
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(
         write_only=True, style={"input_type": "password"}
