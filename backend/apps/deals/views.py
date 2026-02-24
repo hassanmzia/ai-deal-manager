@@ -191,28 +191,77 @@ class DealViewSet(viewsets.ModelViewSet):
                 opportunity_id=str(deal.opportunity_id),
             ))
 
-            # Persist technical volume sections as ProposalSection records if a proposal exists
+            # Persist the solution as TechnicalSolution + ArchitectureDiagram models
             try:
-                from apps.proposals.models import Proposal, ProposalSection
+                from apps.proposals.models import (
+                    ArchitectureDiagram,
+                    Proposal,
+                    ProposalSection,
+                    SolutionValidationReport,
+                    TechnicalSolution,
+                )
 
+                ts_data = result.get("technical_solution", {})
+                ts, _ = TechnicalSolution.objects.update_or_create(
+                    deal=deal,
+                    defaults={
+                        "iteration_count": result.get("iteration_count", 1),
+                        "selected_frameworks": result.get("selected_frameworks", []),
+                        "requirement_analysis": result.get("requirement_analysis", {}),
+                        "executive_summary": ts_data.get("executive_summary", ""),
+                        "architecture_pattern": ts_data.get("architecture_pattern", ""),
+                        "core_components": ts_data.get("core_components", []),
+                        "technology_stack": ts_data.get("technology_stack", {}),
+                        "integration_points": ts_data.get("integration_points", []),
+                        "scalability_approach": ts_data.get("scalability_approach", ""),
+                        "security_architecture": ts_data.get("security_architecture", ""),
+                        "deployment_model": ts_data.get("deployment_model", ""),
+                        "technical_volume": result.get("technical_volume", {}).get("sections", {}),
+                    },
+                )
+
+                # Persist diagrams
+                ArchitectureDiagram.objects.filter(technical_solution=ts).delete()
+                for diag in result.get("diagrams", []):
+                    ArchitectureDiagram.objects.create(
+                        technical_solution=ts,
+                        title=diag.get("title", "Diagram"),
+                        diagram_type=diag.get("type", "system_context"),
+                        mermaid_code=diag.get("mermaid", ""),
+                        description=diag.get("description", ""),
+                    )
+
+                # Persist validation report
+                vr = result.get("validation_report", {})
+                if vr:
+                    SolutionValidationReport.objects.update_or_create(
+                        technical_solution=ts,
+                        defaults={
+                            "overall_quality": vr.get("overall_quality", "fair"),
+                            "score": vr.get("score"),
+                            "passed": vr.get("pass", False),
+                            "issues": vr.get("issues", []),
+                            "suggestions": vr.get("suggestions", []),
+                            "compliance_gaps": vr.get("compliance_gaps", []),
+                        },
+                    )
+
+                # Also persist technical volume sections as ProposalSection if proposal exists
                 proposal = Proposal.objects.filter(deal=deal).first()
-                if proposal and result.get("technical_volume", {}).get("sections"):
-                    for i, (title, content) in enumerate(
-                        result["technical_volume"]["sections"].items()
-                    ):
+                if proposal and ts.technical_volume:
+                    for i, (title, content) in enumerate(ts.technical_volume.items()):
                         ProposalSection.objects.update_or_create(
                             proposal=proposal,
-                            volume="Volume I – Technical",
+                            volume="Volume I - Technical",
                             title=title,
                             defaults={
                                 "section_number": f"1.{i + 1}",
                                 "order": i,
                                 "ai_draft": content,
-                                "is_ai_generated": True,
                             },
                         )
             except Exception:
-                pass  # Persisting sections is optional; don't fail the whole request
+                pass  # Persisting is optional; don't fail the whole request
 
             return Response(result, status=status.HTTP_200_OK)
 
