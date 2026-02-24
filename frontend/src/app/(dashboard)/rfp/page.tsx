@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import {
   getRFPDocuments,
   getComplianceMatrix,
+  createRFPDocument,
 } from "@/services/rfp";
 import {
   RFPDocument,
@@ -15,6 +16,8 @@ import {
   ExtractionStatus,
   ComplianceStatus,
 } from "@/types/rfp";
+import { fetchAllDeals } from "@/services/analytics";
+import { Deal } from "@/types/deal";
 import {
   Search,
   Loader2,
@@ -308,6 +311,153 @@ function ComplianceMatrixPanel({
   );
 }
 
+// ── Upload RFP Modal ──────────────────────────────────────────────────────
+
+interface UploadRFPModalProps {
+  onClose: () => void;
+  onCreated: (doc: RFPDocument) => void;
+}
+
+function UploadRFPModal({ onClose, onCreated }: UploadRFPModalProps) {
+  const [title, setTitle] = useState("");
+  const [dealId, setDealId] = useState("");
+  const [documentType, setDocumentType] = useState<DocumentType>("rfp");
+  const [fileUrl, setFileUrl] = useState("");
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [dealsLoading, setDealsLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const allDocTypes: DocumentType[] = [
+    "rfp", "rfi", "rfq", "sources_sought",
+    "amendment", "qa_response", "attachment", "other",
+  ];
+
+  useEffect(() => {
+    fetchAllDeals()
+      .then((d) => setDeals(d))
+      .catch(() => {})
+      .finally(() => setDealsLoading(false));
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !dealId) {
+      setError("Title and deal are required.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const doc = await createRFPDocument({
+        title: title.trim(),
+        deal: dealId,
+        document_type: documentType,
+        file_url: fileUrl.trim() || undefined,
+      });
+      onCreated(doc);
+    } catch {
+      setError("Failed to upload RFP document. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-lg border bg-background shadow-lg">
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <h2 className="text-lg font-semibold">Upload RFP Document</h2>
+          <button
+            onClick={onClose}
+            className="rounded p-1 hover:bg-muted text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">
+              Document Title <span className="text-red-500">*</span>
+            </label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Solicitation No. FA8650-24-R-0001"
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">
+              Deal <span className="text-red-500">*</span>
+            </label>
+            {dealsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading deals...
+              </div>
+            ) : (
+              <select
+                value={dealId}
+                onChange={(e) => setDealId(e.target.value)}
+                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">Select a deal...</option>
+                {deals.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.title}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Document Type</label>
+            <select
+              value={documentType}
+              onChange={(e) => setDocumentType(e.target.value as DocumentType)}
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              {allDocTypes.map((t) => (
+                <option key={t} value={t}>
+                  {DOCUMENT_TYPE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">File URL (optional)</label>
+            <Input
+              value={fileUrl}
+              onChange={(e) => setFileUrl(e.target.value)}
+              placeholder="https://sam.gov/opp/..."
+              type="url"
+            />
+            <p className="text-xs text-muted-foreground">
+              Link to the document on SAM.gov or your file storage.
+            </p>
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting || dealsLoading}>
+              {submitting ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading...</>
+              ) : (
+                <><Upload className="mr-2 h-4 w-4" />Upload</>
+              )}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────
+
 export default function RFPPage() {
   const [documents, setDocuments] = useState<RFPDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -315,6 +465,8 @@ export default function RFPPage() {
   const [selectedDocument, setSelectedDocument] = useState<RFPDocument | null>(
     null
   );
+
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -380,11 +532,21 @@ export default function RFPPage() {
             Upload, parse, and track RFP documents and compliance requirements
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setShowUploadModal(true)}>
           <Upload className="mr-2 h-4 w-4" />
           Upload RFP
         </Button>
       </div>
+
+      {showUploadModal && (
+        <UploadRFPModal
+          onClose={() => setShowUploadModal(false)}
+          onCreated={(doc) => {
+            setDocuments((prev) => [doc, ...prev]);
+            setShowUploadModal(false);
+          }}
+        />
+      )}
 
       {/* Filter Bar */}
       <Card>
