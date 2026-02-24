@@ -16,10 +16,12 @@
 4. [Phase 2 — Opportunity Intelligence](#4-phase-2--opportunity-intelligence)
 5. [Phase 3 — Deal Pipeline & Workflow](#5-phase-3--deal-pipeline--workflow)
 6. [Phase 4 — RFP Workspace & Compliance](#6-phase-4--rfp-workspace--compliance)
-6A. [Phase 4A — Company AI Strategy Agent](#6a-phase-4a--company-ai-strategy-agent) **(NEW)**
+6A. [Phase 4A — Company AI Strategy Agent](#6a-phase-4a--company-ai-strategy-agent)
+6B. [Phase 4B — Marketing & Sales Expert Agent](#6b-phase-4b--marketing--sales-expert-agent) **(NEW)**
+6C. [Phase 4C — Deep Research Agent](#6c-phase-4c--deep-research-agent) **(NEW)**
 7. [Phase 5 — Past Performance Vault](#7-phase-5--past-performance-vault)
 8. [Phase 6 — Proposal Authoring Studio](#8-phase-6--proposal-authoring-studio) (includes **Fully Autonomous AI Solutions Architect** + **Multimodal Knowledge Vault**)
-9. [Phase 7 — Pricing & Staffing Engine](#9-phase-7--pricing--staffing-engine)
+9. [Phase 7 — Intelligent Pricing & Staffing Engine](#9-phase-7--intelligent-pricing--staffing-engine) **(MAJOR UPGRADE)**
 10. [Phase 8 — Contract Management](#10-phase-8--contract-management)
 11. [Phase 9 — AI Agent Orchestration](#11-phase-9--ai-agent-orchestration)
 12. [Phase 10 — Learning & Optimization](#12-phase-10--learning--optimization)
@@ -708,6 +710,649 @@ strategy_graph.add_edge("generate_win_themes", END)
 
 ---
 
+## 6B. Phase 4B — Marketing & Sales Expert Agent
+
+> **Purpose:** A fully autonomous marketing strategist and sales intelligence engine that crafts winning positioning, develops pursuit-specific marketing strategies, generates capture narratives, and coaches the team on how to sell — not just what to bid on. Works hand-in-hand with the Strategy Agent (strategic direction) and Solution Architect (technical substance) to create irresistible proposals.
+
+### 6B.1 Marketing Intelligence Models
+
+```python
+class MarketIntelligence(models.Model):
+    """Market intelligence gathered and maintained by the marketing agent"""
+    agency = models.CharField(max_length=255)
+    department = models.CharField(max_length=255, blank=True)
+
+    # Agency profile
+    mission = models.TextField()
+    strategic_priorities = models.JSONField(default=list)    # Current fiscal year priorities
+    budget_trends = models.JSONField(default=dict)           # Historical + projected budgets
+    technology_initiatives = models.JSONField(default=list)  # Digital transformation, AI, cloud, etc.
+    key_decision_makers = models.JSONField(default=list)     # CIO, CTO, PM, CO (redacted/public)
+    procurement_preferences = models.JSONField(default=dict) # LPTA vs best-value, set-aside patterns
+
+    # Competitive landscape for this agency
+    incumbent_contracts = models.JSONField(default=list)     # Known incumbents + contract values
+    recompete_timeline = models.JSONField(default=list)      # Upcoming recompetes
+    win_loss_history = models.JSONField(default=list)        # Our history with this agency
+
+    # Relationship strength
+    relationship_score = models.FloatField(default=0.0)      # 0-100 based on past interactions
+    last_interaction = models.DateField(null=True)
+    engagement_history = models.JSONField(default=list)
+
+    # Vector embedding for semantic search
+    embedding = VectorField(dimensions=1536)
+
+class CompetitorProfile(models.Model):
+    """Detailed competitor profiles for competitive positioning"""
+    name = models.CharField(max_length=255)
+    cage_code = models.CharField(max_length=5, blank=True)
+    uei_number = models.CharField(max_length=12, blank=True)
+
+    # Capabilities
+    core_competencies = models.JSONField(default=list)
+    naics_codes = models.JSONField(default=list)
+    certifications = models.JSONField(default=list)       # 8a, SDVOSB, HUBZone, etc.
+    contract_vehicles = models.JSONField(default=list)    # GSA, SEWP, CIO-SP3, etc.
+    key_personnel = models.JSONField(default=list)        # Known experts/leaders (public info)
+
+    # Performance
+    known_contract_wins = models.JSONField(default=list)  # From FPDS/USASpending
+    estimated_revenue = models.DecimalField(max_digits=15, decimal_places=2, null=True)
+    growth_trend = models.CharField(max_length=20, blank=True)  # Growing, Stable, Declining
+    employee_count_estimate = models.IntegerField(null=True)
+
+    # Strengths/Weaknesses
+    strengths = models.JSONField(default=list)
+    weaknesses = models.JSONField(default=list)
+    pricing_tendency = models.CharField(max_length=50, blank=True)  # Aggressive, Moderate, Premium
+    known_teaming_partners = models.JSONField(default=list)
+
+    # Win/loss against us
+    head_to_head_record = models.JSONField(default=dict)   # {wins: X, losses: Y, deals: [...]}
+
+    embedding = VectorField(dimensions=1536)
+
+class CaptureStrategy(models.Model):
+    """Per-deal capture and marketing strategy"""
+    deal = models.ForeignKey('deals.Deal', on_delete=models.CASCADE)
+
+    # Positioning
+    value_proposition = models.TextField()                  # Why us for THIS deal
+    win_themes = models.JSONField(default=list)             # 3-5 deal-specific win themes
+    discriminators = models.JSONField(default=list)         # What makes us uniquely qualified
+    ghost_strategies = models.JSONField(default=list)       # How to ghost competitors' strengths
+    counter_strategies = models.JSONField(default=list)     # How to counter our weaknesses
+
+    # Customer insight
+    customer_hot_buttons = models.JSONField(default=list)   # What the evaluator cares about most
+    evaluation_bias_analysis = models.TextField(blank=True) # Predicted evaluator preferences
+    incumbency_analysis = models.TextField(blank=True)      # Incumbent strengths/weaknesses
+
+    # Teaming strategy
+    recommended_team = models.JSONField(default=list)       # Prime/sub structure
+    teaming_rationale = models.TextField(blank=True)
+    key_personnel_assignments = models.JSONField(default=list)
+
+    # Messaging
+    elevator_pitch = models.TextField(blank=True)           # 30-second pitch for this deal
+    executive_summary_themes = models.JSONField(default=list)
+    section_messaging_guide = models.JSONField(default=dict)  # Per-section key messages
+
+    # Metrics
+    pwin_estimate = models.FloatField(null=True)            # Marketing-assessed P(win)
+    competitive_advantage_score = models.FloatField(null=True)
+```
+
+### 6B.2 Marketing & Sales Agent Capabilities
+
+```python
+class MarketingSalesAgent:
+    """
+    Fully Autonomous Marketing & Sales Expert Agent.
+
+    This agent is a virtual capture manager, BD strategist, and marketing
+    expert rolled into one. It doesn't just analyze — it CRAFTS winning
+    strategies and COACHES the team on how to position every proposal.
+    """
+
+    # ── Market Intelligence ────────────────────────────────
+    def build_agency_profile(self, agency_name: str) -> MarketIntelligence:
+        """
+        Deep research on a target agency:
+        - Budget analysis (USASpending, agency budget docs)
+        - Strategic priorities (agency strategic plan, CIO reports)
+        - Technology initiatives (IT modernization, AI strategy)
+        - Procurement patterns (contract types, set-aside preferences)
+        - Decision-maker mapping (public org charts, SAM.gov)
+        Uses Deep Research Agent for comprehensive web intelligence.
+        """
+
+    def profile_competitor(self, competitor_name: str) -> CompetitorProfile:
+        """
+        Build detailed competitor profile:
+        - FPDS/USASpending contract history
+        - Public capability statements
+        - Known wins/losses in target agencies
+        - Key personnel (LinkedIn public, SAM.gov)
+        - Pricing patterns from historical awards
+        - Teaming partner network
+        """
+
+    # ── Competitive Positioning ────────────────────────────
+    def generate_competitive_analysis(self, deal, competitors: list) -> CompetitiveAnalysis:
+        """
+        For a specific deal, produce:
+        1. Competitor probability matrix (who's likely to bid)
+        2. Competitor strength/weakness analysis per evaluation criterion
+        3. Incumbent advantage assessment
+        4. Our competitive advantages vs each competitor
+        5. Ghost strategies (highlight areas where WE excel, competitors don't)
+        6. Counter strategies (address our known weaknesses proactively)
+        7. Price positioning recommendation
+        """
+
+    # ── Win Theme & Discriminator Engine ───────────────────
+    def generate_win_strategy(self, deal, rfp, solution, company_strategy) -> CaptureStrategy:
+        """
+        The core capture strategy engine. Produces:
+
+        1. VALUE PROPOSITION — Why this agency should choose us
+           - Maps our capabilities to their specific pain points
+           - Quantifies the value we bring (cost savings, efficiency, innovation)
+
+        2. WIN THEMES (3-5 per deal) — Recurring messages throughout the proposal
+           - Each theme ties to an evaluation criterion
+           - Each theme is supported by evidence (past performance, solution design)
+           - Each theme has a customer benefit statement
+
+        3. DISCRIMINATORS — What makes us uniquely qualified
+           - Technical differentiators (from SA agent's solution)
+           - Team differentiators (key personnel, clearances)
+           - Past performance differentiators
+           - Innovation differentiators
+           - Price/value differentiators
+
+        4. GHOST STRATEGIES — Subtle competitive positioning
+           - "Our solution uses [approach] which provides [benefit]"
+           - Implies competitors lack this without naming them
+           - Tied to known competitor weaknesses
+
+        5. MESSAGING GUIDE — Per-section key messages
+           - What to emphasize in each proposal section
+           - How to weave win themes into technical writing
+           - Executive summary tone and themes
+        """
+
+    # ── Proposal Messaging ─────────────────────────────────
+    def craft_executive_summary(self, deal, capture_strategy, solution) -> str:
+        """
+        Generate a compelling executive summary that:
+        - Opens with customer's problem (their words, their priorities)
+        - Presents our understanding (shows deep insight)
+        - Introduces our approach (high-level, benefit-focused)
+        - Weaves in all win themes
+        - Closes with differentiators and call to action
+        - Follows the Shipley method or similar capture methodology
+        """
+
+    def generate_section_themes(self, deal, section_name, capture_strategy) -> SectionThemes:
+        """
+        For each proposal section, provide:
+        - Opening theme statement
+        - Key messages to include
+        - Evidence to reference (past perf, metrics)
+        - Customer benefit to highlight
+        - Action captions for any diagrams/figures
+        """
+
+    # ── Customer Engagement Strategy ───────────────────────
+    def recommend_engagement_plan(self, deal) -> EngagementPlan:
+        """
+        Pre-RFP and during-RFP engagement recommendations:
+        - Capability briefing talking points
+        - Questions to ask in industry days
+        - Clarification questions strategy (what to ask, what not to)
+        - White paper or RFI response strategy
+        - Relationship-building touchpoints
+        """
+
+    # ── B&P (Bid & Proposal) ROI Analysis ──────────────────
+    def estimate_capture_roi(self, deal, estimated_bp_cost) -> CaptureROI:
+        """
+        Business case for pursuing this deal:
+        - Estimated B&P cost (labor, materials, travel)
+        - Expected revenue if won
+        - Expected margin if won
+        - P(win) assessment (combining all agent scores)
+        - Expected value = P(win) × margin - B&P cost
+        - Comparison to other pipeline opportunities
+        - GO / NO-GO recommendation with confidence level
+        """
+
+    # ── Sales Coaching ─────────────────────────────────────
+    def generate_review_coaching(self, review_type, proposal_section) -> ReviewCoaching:
+        """
+        AI-powered review coaching for Pink/Red/Gold teams:
+        - Evaluator perspective analysis ("If I were the evaluator...")
+        - Strength/weakness assessment per section
+        - Score prediction per evaluation criterion
+        - Specific improvement recommendations
+        - "Missing elements" check against evaluation criteria
+        """
+```
+
+### 6B.3 Marketing Frameworks Library
+
+```python
+MARKETING_FRAMEWORKS = {
+    "shipley_capture": {
+        "name": "Shipley Capture Management",
+        "phases": [
+            "Long-Range Positioning (pre-RFP)",
+            "Opportunity Assessment",
+            "Capture Planning",
+            "Proposal Planning",
+            "Proposal Development",
+            "Post-Submittal",
+        ],
+        "key_tools": ["Competitive Analysis", "Win Strategy",
+                       "Price-to-Win", "Customer Profiling"],
+    },
+    "lohfeld_win_strategy": {
+        "name": "Lohfeld Consulting Win Strategy",
+        "elements": [
+            "Customer Intimacy (understand their world)",
+            "Solution Superiority (best technical approach)",
+            "Competitive Advantage (why us, not them)",
+            "Win Themes (recurring proof points)",
+            "Price Competitiveness (value, not just lowest)",
+        ],
+    },
+    "blue_ocean_strategy": {
+        "name": "Blue Ocean Strategy for Proposals",
+        "tools": [
+            "Strategy Canvas (value curve vs competitors)",
+            "Four Actions Framework (Eliminate/Reduce/Raise/Create)",
+            "Buyer Utility Map",
+            "Non-Customer Analysis",
+        ],
+    },
+    "miller_heiman": {
+        "name": "Miller Heiman Strategic Selling",
+        "concepts": [
+            "Economic Buyer (who controls budget)",
+            "User Buyer (who uses the solution)",
+            "Technical Buyer (who evaluates compliance)",
+            "Coach (internal champion)",
+            "Win-Results (what each buyer wins personally)",
+        ],
+    },
+    "spin_selling": {
+        "name": "SPIN Selling for Proposals",
+        "framework": [
+            "Situation (demonstrate understanding of current state)",
+            "Problem (articulate their pain better than they can)",
+            "Implication (show cost of inaction)",
+            "Need-Payoff (present our solution as the answer)",
+        ],
+    },
+}
+```
+
+### 6B.4 LangGraph Marketing Graph
+
+```python
+class MarketingGraphState(TypedDict):
+    deal: dict
+    rfp_requirements: list
+    company_strategy: dict
+    technical_solution: dict          # From SA agent
+    competitor_profiles: list
+    agency_intelligence: dict
+    capture_strategy: dict
+    win_themes: list
+    executive_summary: str
+    section_messaging: dict
+    engagement_plan: dict
+    pwin_assessment: float
+
+marketing_graph = StateGraph(MarketingGraphState)
+marketing_graph.add_node("gather_agency_intel", build_agency_intelligence)
+marketing_graph.add_node("profile_competitors", profile_likely_competitors)
+marketing_graph.add_node("analyze_competition", generate_competitive_analysis)
+marketing_graph.add_node("craft_win_strategy", generate_capture_strategy)
+marketing_graph.add_node("generate_messaging", generate_section_messaging)
+marketing_graph.add_node("craft_exec_summary", craft_executive_summary)
+marketing_graph.add_node("assess_pwin", assess_probability_of_win)
+marketing_graph.add_node("human_review", interrupt_for_capture_review)  # HITL
+
+marketing_graph.add_edge("gather_agency_intel", "profile_competitors")
+marketing_graph.add_edge("profile_competitors", "analyze_competition")
+marketing_graph.add_edge("analyze_competition", "craft_win_strategy")
+marketing_graph.add_edge("craft_win_strategy", "generate_messaging")
+marketing_graph.add_edge("generate_messaging", "craft_exec_summary")
+marketing_graph.add_edge("craft_exec_summary", "assess_pwin")
+marketing_graph.add_edge("assess_pwin", "human_review")
+marketing_graph.add_edge("human_review", END)
+```
+
+---
+
+## 6C. Phase 4C — Deep Research Agent
+
+> **Purpose:** An autonomous deep research agent (inspired by [ConsultRalph](https://github.com/hassanmzia/AI-Consultant-Deep-Research)) that performs comprehensive, multi-source intelligence gathering on ANY topic relevant to the deal pipeline. It produces consulting-quality research reports with cited sources, data tables, and executive summaries — and feeds its findings into every other agent.
+
+### 6C.1 Research Capabilities
+
+```python
+class DeepResearchAgent:
+    """
+    Autonomous Deep Research Agent.
+
+    Inspired by ConsultRalph's approach of using deep research APIs
+    to search across thousands of sources, this agent is the "intelligence
+    gathering engine" for the entire platform.
+
+    Every other agent can REQUEST research, and this agent delivers
+    structured, cited, consulting-quality intelligence.
+    """
+
+    # ── Research Types ─────────────────────────────────────
+    RESEARCH_TYPES = {
+        "agency_due_diligence": {
+            "description": "Deep dive on a federal agency",
+            "sections": [
+                "Agency Mission & Strategic Plan",
+                "Budget Analysis (current + trends)",
+                "Technology Modernization Initiatives",
+                "Key Personnel & Decision Makers (public)",
+                "Procurement Patterns & Preferences",
+                "Recent Contract Awards in Our Domain",
+                "Industry Day & RFI Summary",
+                "Pain Points & Challenges",
+            ],
+        },
+        "competitor_intelligence": {
+            "description": "Competitive intelligence on a specific company",
+            "sections": [
+                "Company Overview & Size",
+                "Core Capabilities & Differentiators",
+                "Contract History (FPDS/USASpending)",
+                "Key Wins & Losses",
+                "Key Personnel & Leadership",
+                "Technology Focus Areas",
+                "Teaming Partners & Alliances",
+                "Pricing Patterns (from public awards)",
+                "Strengths & Vulnerabilities",
+            ],
+        },
+        "market_analysis": {
+            "description": "Market sizing and analysis for a technology/domain",
+            "sections": [
+                "Market Overview (TAM/SAM/SOM)",
+                "Growth Drivers & Trends",
+                "Key Players & Market Share",
+                "Government Spending in This Area",
+                "Technology Maturity Assessment",
+                "Regulatory Landscape",
+                "Emerging Opportunities",
+                "Risk Factors",
+            ],
+        },
+        "technology_assessment": {
+            "description": "Deep research on a specific technology for proposals",
+            "sections": [
+                "Technology Overview & Maturity",
+                "Current State of the Art",
+                "Key Vendors & Implementations",
+                "Government Adoption Status",
+                "Security & Compliance Considerations",
+                "Cost/Benefit Analysis",
+                "Integration Challenges",
+                "Case Studies & Success Stories",
+                "Future Roadmap & Trends",
+            ],
+        },
+        "incumbent_analysis": {
+            "description": "Deep analysis of an incumbent on a recompete",
+            "sections": [
+                "Current Contract Details (value, period, scope)",
+                "Incumbent Performance (CPARS if available)",
+                "Known Issues or Protests",
+                "Incumbent's Strengths on This Contract",
+                "Incumbent's Weaknesses / Gaps",
+                "Likelihood of Incumbent Retention",
+                "Strategy to Unseat Incumbent",
+            ],
+        },
+        "price_benchmarking": {
+            "description": "Research market rates and pricing benchmarks",
+            "sections": [
+                "GSA Schedule Rate Analysis",
+                "FPDS Award Price Analysis (similar contracts)",
+                "Industry Rate Surveys (Deltek, etc.)",
+                "Geographic Rate Variations",
+                "Contract Vehicle Pricing Norms",
+                "Competitor Pricing Patterns",
+                "Government Budget Constraints",
+                "Price-to-Win Range Estimate",
+            ],
+        },
+        "custom": {
+            "description": "Any custom research query",
+            "sections": [],  # Agent determines structure
+        },
+    }
+
+    # ── Core Research Pipeline ─────────────────────────────
+    def execute_research(self, research_request: ResearchRequest) -> ResearchReport:
+        """
+        Full research pipeline:
+
+        1. QUERY PLANNING
+           - Decompose the research question into sub-queries
+           - Identify required data sources (web, APIs, databases)
+           - Plan research strategy (breadth-first, then depth on key findings)
+
+        2. MULTI-SOURCE SEARCH
+           - Web search (multiple search engines, academic, news)
+           - Government databases (SAM.gov, FPDS, USASpending, agency sites)
+           - Industry databases (GovWin, Deltek, Bloomberg Gov)
+           - Knowledge Vault (internal documents, past research)
+           - File/URL analysis (uploaded documents, specified URLs)
+
+        3. INFORMATION EXTRACTION
+           - Extract key facts, statistics, quotes
+           - Identify patterns and trends
+           - Cross-reference across sources for accuracy
+           - Flag conflicting information
+
+        4. SYNTHESIS & ANALYSIS
+           - Organize findings by research section
+           - Generate analysis and insights
+           - Create data tables and comparisons
+           - Develop strategic implications
+
+        5. REPORT GENERATION
+           - Executive summary (1-page)
+           - Full research report (structured markdown)
+           - Data tables (structured JSON → CSV/Excel)
+           - Source citations (all findings backed by URLs)
+           - Confidence scoring (high/medium/low per finding)
+
+        6. DELIVERABLES
+           - Markdown report (stored in DB + rendered in UI)
+           - PDF export (professional formatting)
+           - CSV/Excel (structured data tables)
+           - DOCX executive summary
+           - JSON (structured findings for other agents to consume)
+        """
+
+    # ── Follow-Up Research ─────────────────────────────────
+    def follow_up(self, previous_report_id: str, follow_up_query: str) -> ResearchReport:
+        """
+        Continue research using previous report as context.
+        Like ConsultRalph's follow-up feature — uses previous findings
+        to go deeper on specific aspects.
+        """
+
+    # ── Parallel Research Swarm ────────────────────────────
+    def swarm_research(self, research_requests: list[ResearchRequest]) -> list[ResearchReport]:
+        """
+        Launch multiple research tasks simultaneously.
+        Like ConsultRalph's parallel research capability —
+        complete in minutes what would take days manually.
+
+        Use cases:
+        - Research all 5 likely competitors in parallel
+        - Research agency + technology + market simultaneously
+        - Research multiple incumbents on a recompete
+        """
+
+    # ── Integration with Other Agents ──────────────────────
+    def research_for_agent(self, requesting_agent: str, context: dict) -> ResearchReport:
+        """
+        Other agents can request research:
+
+        - Strategy Agent → "Research this agency's AI priorities for FY2026"
+        - Marketing Agent → "Research competitor X's recent wins at DoD"
+        - Solution Architect → "Research current state of graph RAG implementations"
+        - Pricing Agent → "Research GSA rates for AI engineers in DC area"
+        - Proposal Writer → "Research case studies of similar solutions at this agency"
+        """
+```
+
+### 6C.2 Research Data Models
+
+```python
+class ResearchRequest(models.Model):
+    """Research task request from any agent or human"""
+    requested_by_agent = models.CharField(max_length=100, blank=True)
+    requested_by_user = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    deal = models.ForeignKey('deals.Deal', null=True, on_delete=models.SET_NULL)
+
+    research_type = models.CharField(max_length=50)
+    subject = models.CharField(max_length=500)
+    focus_areas = models.TextField(blank=True)
+    specific_questions = models.JSONField(default=list)
+    context = models.TextField(blank=True)                  # Why this research is needed
+
+    # Attached files/URLs for context
+    attached_files = models.JSONField(default=list)         # MinIO file references
+    attached_urls = models.JSONField(default=list)          # URLs to analyze
+
+    # Status
+    status = models.CharField(choices=[
+        ('queued', 'Queued'),
+        ('researching', 'Researching'),
+        ('synthesizing', 'Synthesizing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ], default='queued')
+    progress_steps = models.IntegerField(default=0)
+    total_steps = models.IntegerField(default=0)
+    started_at = models.DateTimeField(null=True)
+    completed_at = models.DateTimeField(null=True)
+
+    # Follow-up chain
+    parent_research = models.ForeignKey('self', null=True, on_delete=models.SET_NULL)
+
+class ResearchReport(models.Model):
+    """Completed research report with all deliverables"""
+    request = models.OneToOneField(ResearchRequest, on_delete=models.CASCADE)
+
+    # Content
+    executive_summary = models.TextField()
+    full_report_markdown = models.TextField()
+    structured_findings = models.JSONField(default=dict)    # Machine-readable findings
+    data_tables = models.JSONField(default=list)            # Structured tables
+
+    # Sources
+    sources = models.JSONField(default=list)                # [{title, url, snippet, confidence}]
+    source_count = models.IntegerField(default=0)
+
+    # Deliverables (files in MinIO)
+    pdf_file = models.FileField(null=True)
+    csv_file = models.FileField(null=True)
+    docx_file = models.FileField(null=True)
+
+    # Quality
+    confidence_score = models.FloatField(default=0.0)       # Overall confidence in findings
+    ai_quality_assessment = models.TextField(blank=True)
+
+    # Usage tracking
+    consumed_by_agents = models.JSONField(default=list)     # Which agents used this research
+    cited_in_proposals = models.JSONField(default=list)     # Which proposals referenced this
+
+    # Embedding for future retrieval
+    embedding = VectorField(dimensions=1536)
+
+class ResearchActivity(models.Model):
+    """Real-time activity feed during research (like ConsultRalph's activity feed)"""
+    request = models.ForeignKey(ResearchRequest, on_delete=models.CASCADE, related_name='activities')
+    timestamp = models.DateTimeField(auto_now_add=True)
+    activity_type = models.CharField(choices=[
+        ('search', 'Searching'),
+        ('extract', 'Extracting'),
+        ('analyze', 'Analyzing'),
+        ('synthesize', 'Synthesizing'),
+        ('generate', 'Generating'),
+    ])
+    message = models.TextField()                            # "Searching SAM.gov for DoD AI contracts..."
+    sources_found = models.IntegerField(default=0)
+```
+
+### 6C.3 LangGraph Research Graph
+
+```python
+class ResearchGraphState(TypedDict):
+    research_request: dict
+    sub_queries: list                   # Decomposed research questions
+    search_results: dict                # Results from all sources
+    extracted_facts: list               # Structured facts with citations
+    analysis: dict                      # Synthesized analysis
+    report: dict                        # Final report
+    deliverables: dict                  # Generated files
+    activity_log: list                  # Real-time progress messages
+
+research_graph = StateGraph(ResearchGraphState)
+research_graph.add_node("plan_research", decompose_and_plan)
+research_graph.add_node("search_web", search_web_sources)
+research_graph.add_node("search_gov_databases", search_government_databases)
+research_graph.add_node("search_knowledge_vault", search_internal_knowledge)
+research_graph.add_node("analyze_attached_files", analyze_uploaded_files_urls)
+research_graph.add_node("extract_facts", extract_and_structure_facts)
+research_graph.add_node("cross_reference", cross_reference_and_validate)
+research_graph.add_node("synthesize", synthesize_analysis)
+research_graph.add_node("generate_report", generate_full_report)
+research_graph.add_node("generate_deliverables", generate_pdf_csv_docx)
+research_graph.add_node("quality_check", assess_quality_and_confidence)
+
+# Parallel search branches
+research_graph.add_edge("plan_research", "search_web")
+research_graph.add_edge("plan_research", "search_gov_databases")
+research_graph.add_edge("plan_research", "search_knowledge_vault")
+research_graph.add_edge("plan_research", "analyze_attached_files")
+
+# Merge results
+research_graph.add_edge("search_web", "extract_facts")
+research_graph.add_edge("search_gov_databases", "extract_facts")
+research_graph.add_edge("search_knowledge_vault", "extract_facts")
+research_graph.add_edge("analyze_attached_files", "extract_facts")
+
+# Analysis pipeline
+research_graph.add_edge("extract_facts", "cross_reference")
+research_graph.add_edge("cross_reference", "synthesize")
+research_graph.add_edge("synthesize", "generate_report")
+research_graph.add_edge("generate_report", "generate_deliverables")
+research_graph.add_edge("generate_deliverables", "quality_check")
+research_graph.add_edge("quality_check", END)
+```
+
+---
+
 ## 7. Phase 5 — Past Performance Vault
 
 ### 7.1 Past Performance Data Model
@@ -1336,7 +1981,9 @@ Each review produces:
 
 ---
 
-## 9. Phase 7 — Pricing & Staffing Engine
+## 9. Phase 7 — Intelligent Pricing & Staffing Engine (MAJOR UPGRADE)
+
+> **Purpose:** A fully autonomous pricing agent that doesn't just calculate costs — it STRATEGIZES pricing to maximize profit while keeping prices unbeatable. It ingests the Solution Architect's output to derive accurate LOE, uses market intelligence from the Deep Research Agent for benchmarking, and applies game-theoretic optimization to find the sweet spot between maximum margin and maximum P(win).
 
 ### 9.1 Rate Card Management
 
@@ -1344,54 +1991,372 @@ Each review produces:
 class RateCard(models.Model):
     labor_category = models.CharField(max_length=255)   # e.g., "Senior AI Engineer"
     gsa_equivalent = models.CharField(max_length=255, blank=True)
-    base_rate = models.DecimalField(max_digits=10, decimal_places=2)
-    overhead_rate = models.FloatField()      # OH%
-    gna_rate = models.FloatField()           # G&A%
-    fringe_rate = models.FloatField()        # Fringe%
-    profit_rate = models.FloatField()        # Fee%
+    dol_sca_equivalent = models.CharField(max_length=255, blank=True)  # Dept of Labor SCA mapping
+
+    # Base rate build-up
+    base_salary = models.DecimalField(max_digits=10, decimal_places=2)
+    base_hourly = models.DecimalField(max_digits=10, decimal_places=2)
+    fringe_rate = models.FloatField()         # Fringe %
+    overhead_rate = models.FloatField()       # OH %
+    gna_rate = models.FloatField()            # G&A %
+    profit_rate = models.FloatField()         # Fee %
     fully_loaded_rate = models.DecimalField(max_digits=10, decimal_places=2)
+
+    # Market comparison
+    market_low = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    market_median = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    market_high = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    gsa_schedule_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+
+    # Metadata
     effective_date = models.DateField()
+    expiration_date = models.DateField(null=True)
     contract_vehicle = models.CharField(max_length=100, blank=True)
+    geographic_location = models.CharField(max_length=100, blank=True)  # DC, remote, etc.
+    escalation_rate = models.FloatField(default=0.03)  # Annual escalation %
+
+class ConsultantProfile(models.Model):
+    """Individual consultant cost and availability for precise LOE estimation"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    name = models.CharField(max_length=255)
+    labor_category = models.ForeignKey(RateCard, on_delete=models.SET_NULL, null=True)
+    actual_salary = models.DecimalField(max_digits=10, decimal_places=2)
+    actual_cost_rate = models.DecimalField(max_digits=10, decimal_places=2)
+    bill_rate = models.DecimalField(max_digits=10, decimal_places=2)
+    utilization_target = models.FloatField(default=0.85)   # Target billable %
+    current_utilization = models.FloatField(default=0.0)    # Actual billable %
+
+    # Skills & qualifications
+    skills = models.JSONField(default=list)
+    certifications = models.JSONField(default=list)
+    clearance_level = models.CharField(max_length=50, blank=True)
+    years_experience = models.IntegerField(default=0)
+    resume_embedding = VectorField(dimensions=1536, null=True)
+
+    # Availability
+    available_from = models.DateField(null=True)
+    committed_projects = models.JSONField(default=list)     # [{deal_id, hours_per_week, end_date}]
+    max_hours_per_week = models.IntegerField(default=40)
 ```
 
-### 9.2 Pricing Scenario Engine
+### 9.2 LOE Estimation Engine (Solution-Driven)
+
+```python
+class LOEEstimationEngine:
+    """
+    Derives Level of Effort directly from the Solution Architect's output.
+    This is what makes the pricing SMART — it doesn't guess hours,
+    it CALCULATES them from the actual technical solution.
+    """
+
+    def estimate_loe_from_solution(self, technical_solution, rfp_requirements) -> LOEEstimate:
+        """
+        Analyzes the SA agent's solution and calculates:
+
+        1. WORK BREAKDOWN STRUCTURE (WBS)
+           - Decomposes solution into deliverable work packages
+           - Each work package → tasks → subtasks
+           - Maps to labor categories needed
+
+        2. PER-TASK LOE ESTIMATION
+           For each task, estimates hours using:
+           - Analogous estimation (similar past projects from past perf vault)
+           - Parametric estimation (complexity metrics × productivity rates)
+           - Three-point estimation (optimistic, most likely, pessimistic)
+           - AI assessment (LLM evaluates complexity with solutioning context)
+
+        3. STAFFING MODEL
+           - Maps tasks to specific labor categories
+           - Calculates FTE requirements by month/quarter
+           - Identifies key personnel requirements
+           - Accounts for ramp-up/ramp-down periods
+           - Includes management overhead (PM, QA, meetings)
+
+        4. LOE CONFIDENCE SCORING
+           - High confidence: similar to past projects we've done
+           - Medium confidence: similar technology, different scale
+           - Low confidence: novel work, padded estimates
+           - Each estimate includes confidence range (±X%)
+
+        Returns LOEEstimate with:
+        - WBS with hours per task per labor category
+        - Staffing plan by month
+        - Total hours by labor category
+        - Confidence intervals
+        """
+
+    def match_consultants_to_staffing(self, loe_estimate, available_consultants) -> StaffingPlan:
+        """
+        Match actual available consultants to the staffing model:
+        - Skill matching (consultant skills vs task requirements)
+        - Availability matching (consultant calendar vs project timeline)
+        - Cost optimization (use lower-cost consultant if qualified)
+        - Key personnel identification (strongest match for named positions)
+        - Gap analysis (roles we need to hire or sub-contract for)
+        """
+```
+
+### 9.3 Intelligent Pricing Scenario Engine
 
 ```python
 class PricingScenario(models.Model):
     deal = models.ForeignKey(Deal, on_delete=models.CASCADE)
-    name = models.CharField(max_length=100)    # "Aggressive", "Moderate", "Conservative"
+    name = models.CharField(max_length=100)
+    strategy_type = models.CharField(choices=[
+        ('max_profit', 'Maximum Profit (highest margin we can win at)'),
+        ('competitive', 'Competitive (balance margin and win probability)'),
+        ('aggressive', 'Aggressive (thin margin, maximize P(win))'),
+        ('value_based', 'Value-Based (premium price justified by superior solution)'),
+        ('incumbent_match', 'Incumbent Match (match estimated incumbent price)'),
+        ('budget_fit', 'Budget Fit (fit within estimated government budget)'),
+        ('floor', 'Floor Price (minimum viable — covers costs + minimum margin)'),
+    ])
 
-    # Staffing mix
-    labor_mix = models.JSONField()   # [{category, hours, rate, total}, ...]
+    # LOE-driven cost build-up
+    wbs = models.JSONField()                                # Full work breakdown structure
+    labor_mix = models.JSONField()                          # [{category, hours, rate, total, consultant_id}]
+    staffing_plan_by_month = models.JSONField()             # Month-by-month FTE plan
 
-    # Cost elements
+    # Detailed cost elements
     direct_labor = models.DecimalField(max_digits=15, decimal_places=2)
-    other_direct_costs = models.DecimalField(max_digits=15, decimal_places=2)
-    subcontractor_costs = models.DecimalField(max_digits=15, decimal_places=2)
-    travel = models.DecimalField(max_digits=15, decimal_places=2)
+    fringe = models.DecimalField(max_digits=15, decimal_places=2)
     overhead = models.DecimalField(max_digits=15, decimal_places=2)
+    other_direct_costs = models.JSONField()                 # Itemized ODCs
+    subcontractor_costs = models.JSONField()                # Per-sub breakdown
+    travel = models.JSONField()                             # Itemized travel
+    materials = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     gna = models.DecimalField(max_digits=15, decimal_places=2)
-    profit = models.DecimalField(max_digits=15, decimal_places=2)
+    total_cost = models.DecimalField(max_digits=15, decimal_places=2)
+    profit_amount = models.DecimalField(max_digits=15, decimal_places=2)
+    profit_rate = models.FloatField()                       # Effective fee %
     total_price = models.DecimalField(max_digits=15, decimal_places=2)
 
-    # AI analysis
-    win_probability_estimate = models.FloatField()
-    margin_estimate = models.FloatField()
+    # Price-per-unit metrics
+    price_per_fte_year = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    blended_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    cost_per_deliverable = models.JSONField(default=dict)
+
+    # AI intelligence
+    win_probability = models.FloatField()                   # P(win) at this price
+    expected_value = models.DecimalField(max_digits=15, decimal_places=2)  # P(win) × profit
+    margin_percent = models.FloatField()
+    market_position = models.CharField(max_length=50)       # "Below market", "At market", "Above market"
+    price_vs_competitors = models.JSONField()               # Estimated position vs each competitor
+    sensitivity_analysis = models.JSONField()               # How P(win) changes with price changes
     risk_assessment = models.TextField()
     ai_recommendation = models.TextField()
+    recommendation_confidence = models.FloatField()
 
-    is_selected = models.BooleanField(default=False)
-    approved_by = models.ForeignKey(User, null=True)
+    is_recommended = models.BooleanField(default=False)     # AI's recommended scenario
+    is_selected = models.BooleanField(default=False)        # Human's selected scenario
+    approved_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
     approved_at = models.DateTimeField(null=True)
 ```
 
-### 9.3 Price-to-Win Analysis
+### 9.4 Fully Autonomous Pricing Agent
 
-- AI generates 3-7 pricing scenarios
-- For each: estimates P(win) vs margin tradeoff
-- Presents sensitivity analysis to pricing manager
-- **HITL required**: human selects final pricing scenario
-- Historical price data improves estimates over time
+```python
+class PricingAgent:
+    """
+    Fully Autonomous Intelligent Pricing Agent.
+
+    GOAL: Maximize profit while keeping prices unbeatable.
+    This isn't a calculator — it's a strategic pricing brain that
+    understands market dynamics, competitor behavior, and the
+    government's evaluation approach.
+    """
+
+    # ── Phase 1: Market Intelligence Gathering ─────────────
+    def gather_pricing_intelligence(self, deal) -> PricingIntelligence:
+        """
+        Uses Deep Research Agent to gather:
+        1. GSA Schedule rates for relevant labor categories
+        2. FPDS historical awards for similar contracts (price, winner, size)
+        3. Competitor pricing patterns (from public award data)
+        4. Government budget estimates (if available from agency docs)
+        5. IGCE (Independent Government Cost Estimate) signals
+        6. Market rate surveys (salary.com, glassdoor, Deltek)
+        7. Geographic rate differentials
+        8. Contract vehicle ceiling rates
+        """
+
+    # ── Phase 2: Solution-Driven LOE ───────────────────────
+    def compute_solution_based_loe(self, deal, technical_solution) -> LOEEstimate:
+        """
+        Derives LOE from Solution Architect's output:
+        - Analyzes each solution component → work packages
+        - Maps work packages to labor categories + hours
+        - Calculates staffing profile by month
+        - Identifies key personnel requirements
+        - Accounts for management overhead, meetings, QA
+        - Produces three-point estimates (optimistic/likely/pessimistic)
+        """
+
+    # ── Phase 3: Cost Build-Up ─────────────────────────────
+    def build_cost_model(self, loe, rate_cards, consultants) -> CostModel:
+        """
+        Complete cost build-up:
+        - Direct labor (each person × hours × rate)
+        - Fringe benefits (per-person)
+        - Overhead (applied to direct labor base)
+        - ODCs (software licenses, cloud costs, equipment)
+        - Subcontractor costs (if teaming)
+        - Travel (trips × people × per-diem)
+        - Materials
+        - G&A (applied to total cost input base)
+        - TOTAL COST (our actual cost to perform)
+        """
+
+    # ── Phase 4: Profit Optimization (The Magic) ──────────
+    def optimize_profit(self, cost_model, pricing_intelligence, competitive_analysis) -> list[PricingScenario]:
+        """
+        THE CORE ALGORITHM: Generates 5-7 pricing scenarios that
+        find the optimal balance between profit and competitiveness.
+
+        INPUTS:
+        - Our actual cost (floor — can't go below this)
+        - Market rate benchmarks (what's "normal")
+        - Competitor estimated prices (from research + historical patterns)
+        - Government budget signals (ceiling)
+        - Evaluation method (LPTA vs Best Value vs Trade-off)
+        - Technical score advantage (if our solution is stronger)
+
+        OPTIMIZATION STRATEGIES:
+
+        1. GAME-THEORETIC PRICING
+           - Model competitors as rational agents
+           - Estimate their likely price range
+           - Find Nash equilibrium price point
+           - Factor in our technical advantage
+
+        2. EVALUATION-METHOD ADAPTATION
+           IF LPTA (Lowest Price Technically Acceptable):
+             → Price at competitive floor
+             → Maximize volume and contract value
+             → Minimum acceptable margin
+
+           IF BEST VALUE (Trade-off):
+             → Price higher, invest in technical superiority
+             → "Slightly below competitor, much better solution"
+             → Sweet spot: 5-10% below market with 20% better tech
+
+           IF BEST VALUE (Highest Rated):
+             → Price moderately, maximize technical score
+             → Focus B&P investment on proposal quality
+             → Government will pay more for best solution
+
+        3. SENSITIVITY ANALYSIS
+           For each scenario, compute:
+           - P(win) if we're 5% cheaper → how much margin do we gain/lose?
+           - P(win) if we're 5% more expensive → is the margin worth it?
+           - Break-even analysis: minimum price where P(win) × margin > B&P cost
+           - Monte Carlo simulation: 1000 price scenarios → P(win) distribution
+
+        4. SCENARIO GENERATION
+           Produces 5-7 named scenarios:
+           ┌─────────────────────────────────────────────────────────┐
+           │ Scenario          │ Margin │ P(win) │ Expected Value   │
+           ├─────────────────────────────────────────────────────────┤
+           │ Max Profit         │ 15%    │ 35%    │ $525K           │
+           │ Value-Based        │ 12%    │ 50%    │ $600K ← OPTIMAL │
+           │ Competitive        │ 10%    │ 60%    │ $540K           │
+           │ Aggressive         │ 7%     │ 75%    │ $472K           │
+           │ Incumbent Match    │ 8%     │ 55%    │ $396K           │
+           │ Budget Fit         │ 9%     │ 65%    │ $527K           │
+           │ Floor              │ 3%     │ 85%    │ $229K           │
+           └─────────────────────────────────────────────────────────┘
+           Recommends the scenario with highest EXPECTED VALUE
+           (P(win) × profit), not just highest margin or lowest price.
+
+        5. PROFIT MAXIMIZATION LEVERS
+           The agent also suggests ways to INCREASE margin WITHOUT
+           increasing price:
+           - Substitute lower-cost labor where requirements allow
+           - Optimize staffing ramp (don't over-staff early months)
+           - Use subcontractors strategically (their OH may be lower)
+           - Reduce ODCs (open-source alternatives, reuse existing tools)
+           - Offshore/remote portions where allowed
+           - Reuse past artifacts (reduce writing/development hours)
+        """
+
+    # ── Phase 5: Competitive Price Positioning ─────────────
+    def position_against_competitors(self, scenarios, competitor_profiles) -> CompetitivePricing:
+        """
+        For each scenario, estimate position vs each competitor:
+        - "At this price, we're likely 8% below Competitor A and 3% above Competitor B"
+        - Factor in competitors' known pricing patterns
+        - Factor in incumbent advantage/disadvantage
+        - Flag if any scenario puts us at risk of being LPTA-excluded
+        """
+
+    # ── Phase 6: Cost Volume Generation ────────────────────
+    def generate_cost_volume(self, selected_scenario) -> CostVolume:
+        """
+        Generate the complete Volume IV (Pricing/Cost) for the proposal:
+        - Price summary table
+        - Basis of Estimate (BOE) narratives per WBS element
+        - Rate schedule with justification
+        - Staffing plan with labor mix rationale
+        - Subcontractor price summary
+        - Travel estimates with justification
+        - ODC breakdown and justification
+        - Cost narrative explaining our pricing approach
+        - Compliance with RFP pricing instructions (Section L)
+        """
+
+    # ── Phase 7: Price Defense Preparation ─────────────────
+    def prepare_price_defense(self, selected_scenario) -> PriceDefense:
+        """
+        Prepare for potential price negotiations / audit:
+        - Rate substantiation (how we derived each rate)
+        - BOE backup (detailed hours justification)
+        - Market rate comparisons
+        - FAR compliance documentation
+        - Cost realism defense (if government questions our price)
+        - "Should-cost" analysis (proof our price is reasonable)
+        """
+```
+
+### 9.5 LangGraph Pricing Graph
+
+```python
+class PricingGraphState(TypedDict):
+    deal: dict
+    technical_solution: dict            # From SA agent
+    capture_strategy: dict              # From Marketing agent
+    pricing_intelligence: dict          # Market rates, competitor prices
+    loe_estimate: dict                  # Solution-driven LOE
+    cost_model: dict                    # Full cost build-up
+    scenarios: list                     # 5-7 pricing scenarios
+    competitive_positioning: dict       # Price vs competitors
+    sensitivity_analysis: dict          # Monte Carlo / sensitivity results
+    recommended_scenario: dict          # AI's recommendation
+    cost_volume: dict                   # Generated Volume IV
+    price_defense: dict                 # Negotiation preparation
+
+pricing_graph = StateGraph(PricingGraphState)
+pricing_graph.add_node("gather_intelligence", gather_pricing_intelligence)
+pricing_graph.add_node("compute_loe", compute_solution_based_loe)
+pricing_graph.add_node("build_costs", build_cost_model)
+pricing_graph.add_node("optimize_profit", optimize_profit_scenarios)
+pricing_graph.add_node("position_competitively", position_against_competitors)
+pricing_graph.add_node("run_sensitivity", run_monte_carlo_sensitivity)
+pricing_graph.add_node("recommend", select_optimal_scenario)
+pricing_graph.add_node("human_review", interrupt_for_pricing_approval)  # HITL
+pricing_graph.add_node("generate_volume", generate_cost_volume)
+pricing_graph.add_node("prepare_defense", prepare_price_defense)
+
+pricing_graph.add_edge("gather_intelligence", "compute_loe")
+pricing_graph.add_edge("compute_loe", "build_costs")
+pricing_graph.add_edge("build_costs", "optimize_profit")
+pricing_graph.add_edge("optimize_profit", "position_competitively")
+pricing_graph.add_edge("position_competitively", "run_sensitivity")
+pricing_graph.add_edge("run_sensitivity", "recommend")
+pricing_graph.add_edge("recommend", "human_review")
+pricing_graph.add_edge("human_review", "generate_volume")
+pricing_graph.add_edge("generate_volume", "prepare_defense")
+pricing_graph.add_edge("prepare_defense", END)
+```
 
 ---
 
@@ -1442,38 +2407,45 @@ ai_orchestrator/
 ├── src/
 │   ├── main.py                    # FastAPI app for AI endpoints
 │   │   ├── agents/
-│   │   │   ├── orchestrator.py        # Master agent (LangGraph graph)
-│   │   │   ├── strategy_agent.py      # Company AI Strategy Agent (NEW)
-│   │   │   ├── opportunity_scout.py   # Scans & scores opportunities
-│   │   │   ├── rfp_parser.py          # Extracts RFP requirements
-│   │   │   ├── compliance_agent.py    # Builds compliance matrix
-│   │   │   ├── past_perf_agent.py     # RAG retrieval of past performance
-│   │   │   ├── solution_architect.py  # FULL Autonomous SA Agent (UPGRADED)
-│   │   │   ├── proposal_writer.py     # Section-by-section authoring
-│   │   │   ├── pricing_agent.py       # Scenario generation & analysis
-│   │   │   ├── qa_agent.py            # Quality & consistency checker
-│   │   │   ├── submission_agent.py    # Package & checklist builder
-│   │   │   ├── contract_agent.py      # Contract drafting & risk scan
-│   │   │   ├── communication_agent.py # Emails, Q&A, narratives
-│   │   │   └── learning_agent.py      # Policy updates from outcomes
+│   │   │   ├── orchestrator.py          # Master agent (LangGraph graph)
+│   │   │   ├── strategy_agent.py        # Company AI Strategy Agent
+│   │   │   ├── marketing_sales_agent.py # Marketing & Sales Expert Agent (NEW)
+│   │   │   ├── deep_research_agent.py   # Deep Research Agent (NEW)
+│   │   │   ├── opportunity_scout.py     # Scans & scores opportunities
+│   │   │   ├── rfp_parser.py            # Extracts RFP requirements
+│   │   │   ├── compliance_agent.py      # Builds compliance matrix
+│   │   │   ├── past_perf_agent.py       # RAG retrieval of past performance
+│   │   │   ├── solution_architect.py    # FULL Autonomous SA Agent
+│   │   │   ├── proposal_writer.py       # Section-by-section authoring
+│   │   │   ├── pricing_agent.py         # Intelligent Pricing Agent (UPGRADED)
+│   │   │   ├── qa_agent.py              # Quality & consistency checker
+│   │   │   ├── submission_agent.py      # Package & checklist builder
+│   │   │   ├── contract_agent.py        # Contract drafting & risk scan
+│   │   │   ├── communication_agent.py   # Emails, Q&A, narratives
+│   │   │   └── learning_agent.py        # Policy updates from outcomes
 │   │   ├── mcp_servers/
-│   │   │   ├── samgov_tools.py        # SAM.gov API tools
-│   │   │   ├── document_tools.py      # PDF/DOCX parse, chunk, embed
-│   │   │   ├── vector_search.py       # pgvector RAG search (text)
-│   │   │   ├── knowledge_vault_tools.py # Multimodal knowledge vault search (NEW)
-│   │   │   ├── diagram_tools.py       # Mermaid/D2/PlantUML generation (NEW)
-│   │   │   ├── image_search_tools.py  # CLIP-based image/diagram search (NEW)
-│   │   │   ├── template_render.py     # DOCX/PDF generation
-│   │   │   ├── email_tools.py         # Email drafting & sending
-│   │   │   ├── workflow_tools.py      # Stage transitions & tasks
-│   │   │   └── pricing_tools.py       # Rate card & scenario calc
+│   │   │   ├── samgov_tools.py          # SAM.gov API tools
+│   │   │   ├── document_tools.py        # PDF/DOCX parse, chunk, embed
+│   │   │   ├── vector_search.py         # pgvector RAG search (text)
+│   │   │   ├── knowledge_vault_tools.py # Multimodal knowledge vault search
+│   │   │   ├── diagram_tools.py         # Mermaid/D2/PlantUML generation
+│   │   │   ├── image_search_tools.py    # CLIP-based image/diagram search
+│   │   │   ├── web_research_tools.py    # Web search + gov DB tools (NEW)
+│   │   │   ├── competitive_intel_tools.py # FPDS/USASpending/competitor tools (NEW)
+│   │   │   ├── market_rate_tools.py     # GSA rates, salary data, benchmarks (NEW)
+│   │   │   ├── template_render.py       # DOCX/PDF/PPTX/CSV generation
+│   │   │   ├── email_tools.py           # Email drafting & sending
+│   │   │   ├── workflow_tools.py        # Stage transitions & tasks
+│   │   │   └── pricing_tools.py         # Rate card, LOE calc, cost model
 │   │   ├── graphs/
-│   │   │   ├── daily_scan_graph.py    # Daily opportunity pipeline
-│   │   │   ├── strategy_graph.py      # Strategic scoring & portfolio analysis (NEW)
-│   │   │   ├── solution_arch_graph.py # Full SA agent pipeline (NEW)
-│   │   │   ├── proposal_graph.py      # Full proposal generation flow
-│   │   │   ├── pricing_graph.py       # Pricing analysis flow
-│   │   │   └── contract_graph.py      # Contract generation flow
+│   │   │   ├── daily_scan_graph.py      # Daily opportunity pipeline
+│   │   │   ├── strategy_graph.py        # Strategic scoring & portfolio analysis
+│   │   │   ├── marketing_graph.py       # Capture strategy & competitive positioning (NEW)
+│   │   │   ├── research_graph.py        # Deep research pipeline (NEW)
+│   │   │   ├── solution_arch_graph.py   # Full SA agent pipeline
+│   │   │   ├── proposal_graph.py        # Full proposal generation flow
+│   │   │   ├── pricing_graph.py         # Intelligent pricing optimization (UPGRADED)
+│   │   │   └── contract_graph.py        # Contract generation flow
 │   ├── rag/
 │   │   ├── embeddings.py          # Embedding generation
 │   │   ├── retriever.py           # Vector search + reranking
@@ -1534,37 +2506,56 @@ graph.add_conditional_edges("human_review", route_approval)
 # Structured events for inter-agent communication
 EVENTS = {
     # ── Opportunity & Strategy Events ──────────────────────
-    "OpportunityIngested":      {"source": "opportunity_scout", "data": "raw opportunity"},
-    "OpportunityScored":        {"source": "opportunity_scout", "data": "scored opportunity"},
-    "StrategicScoreComputed":   {"source": "strategy_agent", "data": "strategic alignment score + rationale"},
-    "BidRecommendationReady":   {"source": "strategy_agent", "data": "bid/no-bid recommendation"},
-    "PortfolioAnalysisReady":   {"source": "strategy_agent", "data": "portfolio health report"},
-    "WinThemesGenerated":       {"source": "strategy_agent", "data": "deal-specific win themes"},
-    "CompetitiveAssessmentDone": {"source": "strategy_agent", "data": "competitive landscape"},
+    "OpportunityIngested":       {"source": "opportunity_scout", "data": "raw opportunity"},
+    "OpportunityScored":         {"source": "opportunity_scout", "data": "scored opportunity"},
+    "StrategicScoreComputed":    {"source": "strategy_agent", "data": "strategic alignment score + rationale"},
+    "BidRecommendationReady":    {"source": "strategy_agent", "data": "bid/no-bid recommendation"},
+    "PortfolioAnalysisReady":    {"source": "strategy_agent", "data": "portfolio health report"},
+
+    # ── Deep Research Events ───────────────────────────────
+    "ResearchRequested":         {"source": "any agent", "data": "research request"},
+    "ResearchInProgress":        {"source": "deep_research_agent", "data": "progress update + activity"},
+    "ResearchCompleted":         {"source": "deep_research_agent", "data": "full report + deliverables"},
+    "FollowUpResearchCompleted": {"source": "deep_research_agent", "data": "follow-up report"},
+
+    # ── Marketing & Sales Events ───────────────────────────
+    "AgencyIntelReady":          {"source": "marketing_sales_agent", "data": "agency profile + intel"},
+    "CompetitorProfiled":        {"source": "marketing_sales_agent", "data": "competitor profile"},
+    "CaptureStrategyReady":      {"source": "marketing_sales_agent", "data": "win themes + discriminators"},
+    "ExecSummaryCrafted":        {"source": "marketing_sales_agent", "data": "executive summary draft"},
+    "SectionMessagingReady":     {"source": "marketing_sales_agent", "data": "per-section messaging guide"},
+    "PWinAssessed":              {"source": "marketing_sales_agent", "data": "probability of win"},
 
     # ── RFP & Compliance Events ────────────────────────────
-    "RFPParsed":                {"source": "rfp_parser", "data": "extracted requirements"},
-    "ComplianceMatrixReady":    {"source": "compliance_agent", "data": "matrix items"},
-    "PastPerfMatched":          {"source": "past_perf_agent", "data": "matched projects"},
+    "RFPParsed":                 {"source": "rfp_parser", "data": "extracted requirements"},
+    "ComplianceMatrixReady":     {"source": "compliance_agent", "data": "matrix items"},
+    "PastPerfMatched":           {"source": "past_perf_agent", "data": "matched projects"},
 
-    # ── Solution Architect Events (NEW) ────────────────────
-    "RequirementsAnalyzed":     {"source": "solution_architect", "data": "deep requirement analysis"},
-    "KnowledgeRetrieved":       {"source": "solution_architect", "data": "multimodal knowledge bundle"},
-    "SolutionSynthesized":      {"source": "solution_architect", "data": "complete technical solution"},
-    "DiagramsGenerated":        {"source": "solution_architect", "data": "architecture diagrams (14+)"},
-    "TechnicalVolumeReady":     {"source": "solution_architect", "data": "full Volume I draft"},
-    "SolutionValidated":        {"source": "solution_architect", "data": "validation report"},
+    # ── Solution Architect Events ──────────────────────────
+    "RequirementsAnalyzed":      {"source": "solution_architect", "data": "deep requirement analysis"},
+    "KnowledgeRetrieved":        {"source": "solution_architect", "data": "multimodal knowledge bundle"},
+    "SolutionSynthesized":       {"source": "solution_architect", "data": "complete technical solution"},
+    "DiagramsGenerated":         {"source": "solution_architect", "data": "architecture diagrams (14+)"},
+    "TechnicalVolumeReady":      {"source": "solution_architect", "data": "full Volume I draft"},
+    "SolutionValidated":         {"source": "solution_architect", "data": "validation report"},
+
+    # ── Intelligent Pricing Events ─────────────────────────
+    "PricingIntelGathered":      {"source": "pricing_agent", "data": "market rates + competitor prices"},
+    "LOEComputed":               {"source": "pricing_agent", "data": "solution-driven LOE estimate"},
+    "CostModelBuilt":            {"source": "pricing_agent", "data": "full cost build-up"},
+    "PricingScenariosReady":     {"source": "pricing_agent", "data": "5-7 optimized scenarios"},
+    "PricingRecommended":        {"source": "pricing_agent", "data": "AI recommended scenario"},
+    "CostVolumeGenerated":       {"source": "pricing_agent", "data": "Volume IV draft"},
 
     # ── Proposal & Review Events ───────────────────────────
-    "SectionDrafted":           {"source": "proposal_writer", "data": "section content"},
-    "PricingReady":             {"source": "pricing_agent", "data": "scenarios"},
-    "QAComplete":               {"source": "qa_agent", "data": "issues found"},
+    "SectionDrafted":            {"source": "proposal_writer", "data": "section content"},
+    "QAComplete":                {"source": "qa_agent", "data": "issues found"},
 
     # ── Approval & Submission Events ───────────────────────
-    "ApprovalRequested":        {"source": "any agent", "data": "approval request"},
-    "ApprovalGranted":          {"source": "human", "data": "decision + feedback"},
-    "SubmissionPackaged":       {"source": "submission_agent", "data": "package ready"},
-    "OutcomeRecorded":          {"source": "learning_agent", "data": "win/loss + metrics"},
+    "ApprovalRequested":         {"source": "any agent", "data": "approval request"},
+    "ApprovalGranted":           {"source": "human", "data": "decision + feedback"},
+    "SubmissionPackaged":        {"source": "submission_agent", "data": "package ready"},
+    "OutcomeRecorded":           {"source": "learning_agent", "data": "win/loss + metrics"},
     "StrategyUpdateRecommended": {"source": "learning_agent", "data": "strategy evolution suggestions"},
 }
 ```
@@ -1663,17 +2654,26 @@ class GoalSetting(models.Model):
 - `AuditLog`, `AITraceLog`
 - `Notification`, `NotificationPreference`
 
-### Company Strategy (NEW)
+### Company Strategy
 - `CompanyStrategy` (living strategic plan — markets, goals, capacity, differentiators)
 - `StrategicGoal` (quantified objectives with targets and deadlines)
 - `PortfolioSnapshot` (periodic pipeline health vs strategy)
-- `CompetitiveIntelligence` (competitor profiles, win/loss patterns)
+
+### Marketing & Sales Intelligence (NEW)
+- `MarketIntelligence` (per-agency profile — budget, priorities, procurement patterns)
+- `CompetitorProfile` (detailed competitor profiles — capabilities, pricing, wins/losses)
+- `CaptureStrategy` (per-deal win themes, discriminators, ghost/counter strategies)
+
+### Deep Research (NEW)
+- `ResearchRequest` (research tasks from agents or humans)
+- `ResearchReport` (completed reports with deliverables — PDF, CSV, DOCX)
+- `ResearchActivity` (real-time activity feed during research)
 
 ### Opportunity Intelligence
 - `OpportunitySource` (SAM.gov, labs, etc.)
 - `Opportunity` (normalized, with embeddings)
 - `OpportunityScore` (fit score + factors + explanation)
-- `StrategicScore` (strategy alignment score per opportunity) (NEW)
+- `StrategicScore` (strategy alignment score per opportunity)
 - `CompanyProfile` (UEI, CAGE, capabilities, embeddings)
 - `DailyDigest` (Top 10 daily report)
 
@@ -1712,9 +2712,13 @@ class GoalSetting(models.Model):
 - `ReviewCycle` (pink/red/gold team)
 - `ReviewComment` (per-section feedback)
 
-### Pricing
-- `RateCard` (labor categories + rates)
-- `PricingScenario` (staffing mix + costs + analysis)
+### Pricing (UPGRADED)
+- `RateCard` (labor categories + rates + market benchmarks)
+- `ConsultantProfile` (individual consultant cost, skills, availability)
+- `LOEEstimate` (WBS-driven hours from SA agent's solution)
+- `CostModel` (detailed cost build-up)
+- `PricingScenario` (7 strategy types + P(win) + expected value + sensitivity)
+- `PricingIntelligence` (market rates, competitor price estimates)
 - `PricingApproval` (HITL gate)
 
 ### Contracts
@@ -1841,7 +2845,7 @@ ai-deal-manager/
 │       │   └── services/
 │       │       ├── generator.py
 │       │       └── clause_scanner.py
-│       ├── strategy/                     # Company Strategy (NEW)
+│       ├── strategy/                     # Company Strategy
 │       │   ├── models.py            # CompanyStrategy, StrategicGoal, PortfolioSnapshot
 │       │   ├── serializers.py
 │       │   ├── views.py
@@ -1849,7 +2853,27 @@ ai-deal-manager/
 │       │   └── services/
 │       │       ├── portfolio_analyzer.py   # Pipeline health vs strategy
 │       │       └── competitive_intel.py    # Competitor analysis
-│       ├── knowledge_vault/              # Multimodal Knowledge Vault (NEW)
+│       ├── marketing/                    # Marketing & Sales Intelligence (NEW)
+│       │   ├── models.py            # MarketIntelligence, CompetitorProfile, CaptureStrategy
+│       │   ├── serializers.py
+│       │   ├── views.py
+│       │   ├── urls.py
+│       │   └── services/
+│       │       ├── agency_profiler.py    # Agency intelligence gathering
+│       │       ├── competitor_profiler.py # Competitor analysis
+│       │       └── capture_strategy.py   # Win theme & positioning engine
+│       ├── research/                     # Deep Research (NEW)
+│       │   ├── models.py            # ResearchRequest, ResearchReport, ResearchActivity
+│       │   ├── serializers.py
+│       │   ├── views.py
+│       │   ├── urls.py
+│       │   ├── services/
+│       │   │   ├── research_engine.py    # Core research pipeline
+│       │   │   ├── web_searcher.py       # Multi-source web search
+│       │   │   ├── gov_db_searcher.py    # FPDS, USASpending, SAM.gov search
+│       │   │   └── report_generator.py   # PDF/CSV/DOCX deliverable generation
+│       │   └── tasks.py             # Async research tasks (Celery)
+│       ├── knowledge_vault/              # Multimodal Knowledge Vault
 │       │   ├── models.py            # KnowledgeVault, KnowledgeChunk
 │       │   ├── serializers.py
 │       │   ├── views.py
@@ -1895,8 +2919,10 @@ ai-deal-manager/
 │       │   ├── contracts/
 │       │   ├── past-performance/
 │       │   ├── communications/
-│       │   ├── knowledge-vault/      # Knowledge Vault management (NEW)
-│       │   ├── strategy/             # Company strategy dashboard (NEW)
+│       │   ├── knowledge-vault/      # Knowledge Vault management
+│       │   ├── strategy/             # Company strategy dashboard
+│       │   ├── marketing/            # Capture strategy & competitive intelligence (NEW)
+│       │   ├── research/             # Deep research workspace (NEW)
 │       │   ├── analytics/
 │       │   ├── settings/
 │       │   └── admin/
@@ -1990,7 +3016,7 @@ ai-deal-manager/
 - [ ] Frontend: Opportunity list, detail view, score breakdown
 - [ ] Lab procurement page monitors (configurable)
 
-### Sprint 5: Company AI Strategy Agent (Phase 4A — NEW)
+### Sprint 5: Company AI Strategy Agent (Phase 4A)
 - [ ] CompanyStrategy, StrategicGoal, PortfolioSnapshot models
 - [ ] Strategy agent: strategic scoring of opportunities
 - [ ] Strategy agent: bid/no-bid recommendation engine
@@ -2002,7 +3028,43 @@ ai-deal-manager/
 - [ ] Frontend: Strategy settings (target agencies, domains, goals)
 - [ ] Integration: strategic score injected into bid/no-bid HITL gate
 
-### Sprint 6-7: Deal Pipeline (Phase 3)
+### Sprint 6: Deep Research Agent (Phase 4C — NEW)
+- [ ] ResearchRequest, ResearchReport, ResearchActivity models
+- [ ] Research engine: query planning & decomposition
+- [ ] Research engine: multi-source web search (web, news, academic)
+- [ ] Research engine: government database search (FPDS, USASpending, SAM.gov)
+- [ ] Research engine: Knowledge Vault integration (internal docs)
+- [ ] Research engine: file/URL analysis (uploaded context)
+- [ ] Research engine: fact extraction, cross-referencing, synthesis
+- [ ] Research engine: report generation (markdown + structured findings)
+- [ ] Research engine: deliverable generation (PDF, CSV, DOCX)
+- [ ] Follow-up research (use previous report as context)
+- [ ] Parallel research swarm (multiple tasks simultaneously)
+- [ ] MCP tools: web_research_tools.py, competitive_intel_tools.py
+- [ ] LangGraph research_graph.py (full pipeline with parallel branches)
+- [ ] Frontend: Research workspace (launch, monitor progress, view reports)
+- [ ] Frontend: Real-time activity feed during research
+- [ ] Frontend: Research history & report library
+- [ ] Celery tasks for async research execution
+
+### Sprint 7: Marketing & Sales Expert Agent (Phase 4B — NEW)
+- [ ] MarketIntelligence, CompetitorProfile, CaptureStrategy models
+- [ ] Marketing agent: agency profiling (uses Deep Research Agent)
+- [ ] Marketing agent: competitor profiling (FPDS + web research)
+- [ ] Marketing agent: competitive analysis per deal
+- [ ] Marketing agent: win strategy engine (themes, discriminators, ghost strategies)
+- [ ] Marketing agent: executive summary generation (Shipley method)
+- [ ] Marketing agent: section messaging guide generation
+- [ ] Marketing agent: P(win) assessment
+- [ ] Marketing agent: capture ROI analysis
+- [ ] Marketing agent: review coaching (Pink/Red/Gold team AI coaching)
+- [ ] Marketing frameworks library (Shipley, Lohfeld, Blue Ocean, Miller Heiman, SPIN)
+- [ ] LangGraph marketing_graph.py (full pipeline)
+- [ ] Frontend: Capture strategy workspace
+- [ ] Frontend: Competitor intelligence dashboard
+- [ ] Frontend: Win theme editor & messaging guide viewer
+
+### Sprint 8-9: Deal Pipeline (Phase 3)
 - [ ] Deal model + workflow state machine
 - [ ] Task & checklist system with templates
 - [ ] Approval system with HITL gates (now includes strategic score)
@@ -2010,7 +3072,7 @@ ai-deal-manager/
 - [ ] Frontend: Deal detail page with timeline
 - [ ] Notifications (in-app + email) for stage changes
 
-### Sprint 8-9: RFP & Past Performance (Phase 4-5)
+### Sprint 10-11: RFP & Past Performance (Phase 4-5)
 - [ ] RFP document upload + AI extraction
 - [ ] Compliance matrix generator
 - [ ] Amendment diff tracker
@@ -2019,7 +3081,7 @@ ai-deal-manager/
 - [ ] Frontend: RFP workspace with compliance matrix
 - [ ] Frontend: Past performance library
 
-### Sprint 10: Multimodal Knowledge Vault (NEW)
+### Sprint 12: Multimodal Knowledge Vault
 - [ ] KnowledgeVault + KnowledgeChunk models
 - [ ] Upload pipeline: PDF/DOCX/images/presentations → chunk → embed
 - [ ] Text embedding pipeline (OpenAI/Anthropic embeddings → pgvector)
@@ -2029,7 +3091,7 @@ ai-deal-manager/
 - [ ] Frontend: Knowledge Vault management (upload, browse, tag, search)
 - [ ] Seed vault with solutioning frameworks library (TOGAF, C4, arc42, etc.)
 
-### Sprint 11-13: Fully Autonomous AI Solutions Architect + Proposal Studio (Phase 6 — MAJOR UPGRADE)
+### Sprint 13-15: Fully Autonomous AI Solutions Architect + Proposal Studio (Phase 6)
 - [ ] Solution Architect Agent: requirement deep-dive analysis
 - [ ] Solution Architect Agent: multimodal knowledge retrieval (RAG)
 - [ ] Solution Architect Agent: framework selection (C4, TOGAF, arc42, etc.)
@@ -2042,29 +3104,48 @@ ai-deal-manager/
 - [ ] Solution Architect Agent: self-critique validation loop
 - [ ] LangGraph solution_arch_graph.py (full autonomous SA pipeline)
 - [ ] Proposal templates (5 volumes)
-- [ ] AI section generation (LangGraph proposal graph, using SA output)
-- [ ] Review workflow (pink/red/gold team)
+- [ ] AI section generation (uses SA output + Marketing messaging + Past Perf)
+- [ ] Review workflow (pink/red/gold team + AI coaching from Marketing agent)
 - [ ] Frontend: Proposal editor with AI workbench + diagram viewer
 - [ ] Frontend: Solution Architect workspace (view generated architectures)
-- [ ] Frontend: Review interface with comments
+- [ ] Frontend: Review interface with AI coaching + comments
 - [ ] DOCX export with embedded diagrams + professional formatting
 
-### Sprint 14: Pricing & Contracts (Phase 7-8)
-- [ ] Rate card management
-- [ ] Pricing scenario engine
-- [ ] Price-to-win analysis
+### Sprint 16-17: Intelligent Pricing Engine (Phase 7 — MAJOR UPGRADE)
+- [ ] RateCard + ConsultantProfile models (with market benchmarks)
+- [ ] LOE Estimation Engine: WBS derivation from SA solution
+- [ ] LOE Estimation Engine: analogous/parametric/three-point estimation
+- [ ] LOE Estimation Engine: consultant-to-staffing matching
+- [ ] Pricing Agent: market intelligence gathering (uses Deep Research Agent)
+- [ ] Pricing Agent: cost model builder (full cost build-up)
+- [ ] Pricing Agent: game-theoretic profit optimization
+- [ ] Pricing Agent: 7 scenario strategies (max profit → floor)
+- [ ] Pricing Agent: Monte Carlo sensitivity analysis
+- [ ] Pricing Agent: competitive price positioning
+- [ ] Pricing Agent: Volume IV (cost volume) generation
+- [ ] Pricing Agent: price defense preparation
+- [ ] MCP tools: market_rate_tools.py (GSA rates, salary data)
+- [ ] LangGraph pricing_graph.py (full intelligent pricing pipeline)
+- [ ] Frontend: Pricing scenario comparison with P(win) vs margin charts
+- [ ] Frontend: LOE breakdown with WBS drill-down
+- [ ] Frontend: Staffing plan visualization (by month, by person)
+- [ ] Frontend: Sensitivity analysis interactive charts
+
+### Sprint 18: Contract Management (Phase 8)
 - [ ] Contract templates + clause library
 - [ ] Contract risk scanner
-- [ ] Frontend: Pricing scenario comparison
+- [ ] Contract drafting from deal specifics
+- [ ] Redline tracking with version history
 - [ ] Frontend: Contract workspace
 
-### Sprint 15-16: AI Orchestration & Learning (Phase 9-10)
-- [ ] LangGraph multi-agent orchestration (now 14 agents including strategy + SA)
-- [ ] MCP tool servers (all integrations, including 3 new SA-specific servers)
-- [ ] A2A event system (expanded with strategy + SA events)
+### Sprint 19-20: AI Orchestration & Learning (Phase 9-10)
+- [ ] LangGraph multi-agent orchestration (16 agents)
+- [ ] MCP tool servers (all integrations — 13 servers)
+- [ ] A2A event system (35+ events)
 - [ ] Communications agent (email, Q&A)
 - [ ] Policy & goal settings manager
 - [ ] Learning agent (outcome tracking + policy updates + strategy evolution)
+- [ ] Learning feeds back to ALL agents (strategy, marketing, SA, pricing)
 - [ ] Submission packaging + audit trail
 - [ ] Frontend: AI workbench, policy settings, analytics dashboards
 
@@ -2118,15 +3199,18 @@ JWT_EXPIRATION_HOURS=24
 
 1. **Daily Top 10 opportunities** automatically scored (technical fit + strategic alignment)
 2. **Company AI Strategy Agent** maintains living strategy, influences every bid decision, balances portfolio
-3. **End-to-end pipeline** from opportunity → proposal → submission → contract
-4. **Fully Autonomous AI Solutions Architect** produces complete technical solutions with 14+ architecture diagrams from your multimodal knowledge vault
-5. **Multimodal Knowledge Vault** stores and retrieves your reference architectures, images, diagrams, documents, patterns, and best practices via RAG
-6. **AI generates** compliance matrices, proposal sections, pricing scenarios, contracts — all grounded in YOUR knowledge base
-7. **HITL gates** enforce human approval at all critical decisions
-8. **Learning loop** improves scoring, writing, pricing, AND evolves company strategy over time
-9. **Professional output** (DOCX proposals with embedded architecture diagrams, proper formatting, branding)
-10. **Full audit trail** for every action (human and AI)
-11. **RBAC** with MFA protecting sensitive operations
-12. **Docker Compose** single-command deployment with no port conflicts
-13. **Real-time** collaboration and notifications via WebSocket
-14. **14 specialized AI agents** (up from 12) orchestrated via LangGraph + MCP + A2A
+3. **Marketing & Sales Expert Agent** crafts winning capture strategies, generates win themes, coaches review teams, and positions every proposal to win
+4. **Deep Research Agent** produces consulting-quality intelligence reports (with PDF/CSV/DOCX deliverables) on agencies, competitors, markets, and technologies — feeds every other agent
+5. **End-to-end pipeline** from opportunity → research → strategy → capture → proposal → pricing → submission → contract
+6. **Fully Autonomous AI Solutions Architect** produces complete technical solutions with 14+ architecture diagrams from your multimodal knowledge vault
+7. **Intelligent Pricing Agent** maximizes profit while keeping prices unbeatable — derives LOE from solution, uses game-theoretic optimization, runs Monte Carlo sensitivity analysis, generates Volume IV
+8. **Multimodal Knowledge Vault** stores and retrieves your reference architectures, images, diagrams, documents, patterns, and best practices via RAG
+9. **AI generates** compliance matrices, proposal sections, pricing scenarios, contracts — all grounded in YOUR knowledge base
+10. **HITL gates** enforce human approval at all critical decisions
+11. **Learning loop** improves scoring, writing, pricing, marketing, AND evolves company strategy over time
+12. **Professional output** (DOCX proposals with embedded architecture diagrams, proper formatting, branding)
+13. **Full audit trail** for every action (human and AI)
+14. **RBAC** with MFA protecting sensitive operations
+15. **Docker Compose** single-command deployment with no port conflicts
+16. **Real-time** collaboration and notifications via WebSocket
+17. **16 specialized AI agents** orchestrated via LangGraph + MCP + A2A with 35+ inter-agent events
