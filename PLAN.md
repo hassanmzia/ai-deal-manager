@@ -20,6 +20,8 @@
 6B. [Phase 4B — Marketing & Sales Expert Agent](#6b-phase-4b--marketing--sales-expert-agent) **(NEW)**
 6C. [Phase 4C — Deep Research Agent](#6c-phase-4c--deep-research-agent) **(NEW)**
 6D. [Phase 4D — Business Legal Agent](#6d-phase-4d--business-legal-agent) **(NEW)**
+6E. [Phase 4E — Teaming & Subcontractor Selection Agent](#6e-phase-4e--teaming--subcontractor-selection-agent) **(NEW)**
+6F. [Phase 4F — Security & Compliance Mapping Agent](#6f-phase-4f--security--compliance-mapping-agent) **(NEW)**
 7. [Phase 5 — Past Performance Vault](#7-phase-5--past-performance-vault)
 8. [Phase 6 — Proposal Authoring Studio](#8-phase-6--proposal-authoring-studio) (includes **Fully Autonomous AI Solutions Architect** + **Multimodal Knowledge Vault**)
 9. [Phase 7 — Intelligent Pricing & Staffing Engine](#9-phase-7--intelligent-pricing--staffing-engine) **(MAJOR UPGRADE)**
@@ -1746,6 +1748,806 @@ CONTRACT EXECUTION → compliance monitoring, modifications, claims (REA/CDA)
 
 ---
 
+## 6E. Phase 4E — Teaming & Subcontractor Selection Agent
+
+> **The strategic teaming engine.** In federal contracting, teaming decisions are make-or-break capture decisions. This agent actively identifies, evaluates, recommends, and manages teaming partners and subcontractors — optimizing for capabilities, clearances, small business goals, past performance, and competitive advantage. It goes beyond the Legal Agent (which reviews teaming agreements) and the Pricing Agent (which handles sub costs) to be the intelligent matchmaker that assembles winning teams.
+
+### 6E.1 Teaming Data Models
+
+```python
+# backend/apps/teaming/models.py
+
+class TeamingPartner(BaseModel):
+    """Database of potential teaming partners and subcontractors."""
+    company_name = models.CharField(max_length=500)
+    cage_code = models.CharField(max_length=10, blank=True)
+    uei = models.CharField(max_length=20, blank=True)  # SAM.gov UEI
+    duns = models.CharField(max_length=15, blank=True)
+
+    # Capabilities
+    naics_codes = models.JSONField(default=list)  # NAICS codes they perform
+    capabilities = models.JSONField(default=list)  # Technical capabilities
+    service_areas = models.JSONField(default=list)  # Domains (cloud, AI, cyber, etc.)
+    technology_stack = models.JSONField(default=list)  # Specific technologies
+
+    # Clearances & Certifications
+    facility_clearance = models.CharField(max_length=50, blank=True)  # Secret, TS, TS/SCI
+    personnel_clearances = models.JSONField(default=dict)  # {TS: 15, Secret: 30, ...}
+    certifications = models.JSONField(default=list)  # ISO, CMMI, FedRAMP, etc.
+
+    # Small Business Status
+    small_business_type = models.CharField(max_length=50, blank=True)  # 8(a), HUBZone, SDVOSB, WOSB, SDB, None
+    is_small_business = models.BooleanField(default=False)
+    sb_certifications = models.JSONField(default=list)  # Active SBA certifications
+    sb_graduation_date = models.DateField(null=True, blank=True)
+
+    # Past Performance with Us
+    past_teaming_count = models.IntegerField(default=0)
+    past_teaming_wins = models.IntegerField(default=0)
+    reliability_score = models.FloatField(default=0.0)  # 0-100 based on delivery history
+    last_teamed_date = models.DateField(null=True, blank=True)
+
+    # Contract Vehicles
+    contract_vehicles = models.JSONField(default=list)  # GSA MAS, STARS III, OASIS+, etc.
+
+    # Financial
+    annual_revenue = models.DecimalField(max_digits=15, decimal_places=2, null=True)
+    employee_count = models.IntegerField(null=True)
+    typical_rate_range = models.JSONField(default=dict)  # {role: [min, max]}
+
+    # Relationship
+    relationship_status = models.CharField(max_length=50)  # preferred, approved, new, blacklisted
+    nda_on_file = models.BooleanField(default=False)
+    nda_expiry = models.DateField(null=True, blank=True)
+    primary_contact = models.JSONField(default=dict)  # {name, title, email, phone}
+    notes = models.TextField(blank=True)
+
+    # Embeddings for RAG matching
+    capability_embedding = VectorField(dimensions=1536, null=True)
+
+
+class TeamingRecommendation(BaseModel):
+    """AI-generated teaming recommendation for a specific deal."""
+    deal = models.ForeignKey('deals.Deal', on_delete=models.CASCADE)
+    recommendation_type = models.CharField(max_length=50)  # prime, sub, jv, mentor_protege
+
+    # Recommended Partners
+    recommended_partners = models.JSONField(default=list)  # Ranked list with scores
+    # Each entry: {partner_id, role, work_share_pct, rationale, capability_match,
+    #              clearance_match, sb_value, risk_score, rate_competitiveness}
+
+    # Team Composition
+    proposed_team_structure = models.JSONField(default=dict)
+    # {prime: {company, work_share, capabilities},
+    #  subs: [{company, work_share, capabilities, sb_type}],
+    #  key_personnel_from: {partner_id: [roles]}}
+
+    # Small Business Analysis
+    sb_goal_analysis = models.JSONField(default=dict)
+    # {required_sb_pct, achieved_sb_pct, by_category: {8a: pct, HUBZone: pct, ...},
+    #  compliant: bool, gap_areas: [...], recommended_additions: [...]}
+
+    # Competitive Assessment
+    team_strength_score = models.FloatField()  # 0-100
+    competitive_advantage = models.TextField()
+    team_weaknesses = models.TextField()
+    mitigation_strategies = models.JSONField(default=list)
+
+    # Work Share Optimization
+    work_share_matrix = models.JSONField(default=dict)
+    # {wbs_element: {partner: pct, rationale}}
+    limitation_on_subcontracting_check = models.JSONField(default=dict)
+    # {rule, threshold_pct, current_pct, compliant, corrective_action}
+
+    status = models.CharField(max_length=20, default='draft')  # draft, reviewed, approved
+
+
+class TeamingAgreement(BaseModel):
+    """Tracks teaming agreements, NDAs, and LOIs between parties."""
+    deal = models.ForeignKey('deals.Deal', on_delete=models.CASCADE, null=True)
+    partner = models.ForeignKey(TeamingPartner, on_delete=models.CASCADE)
+    agreement_type = models.CharField(max_length=50)  # nda, loi, teaming_agreement, subcontract, jv_agreement
+    status = models.CharField(max_length=30)  # draft, sent, negotiating, executed, expired
+    effective_date = models.DateField(null=True)
+    expiry_date = models.DateField(null=True)
+    document = models.FileField(upload_to='teaming_agreements/')
+
+    # Key Terms
+    work_share = models.JSONField(default=dict)  # Agreed work allocation
+    exclusivity = models.BooleanField(default=False)
+    ip_provisions = models.TextField(blank=True)
+    non_compete_scope = models.TextField(blank=True)
+    flow_down_clauses = models.JSONField(default=list)
+
+    # Legal Review Status (from Legal Agent)
+    legal_review_status = models.CharField(max_length=20, default='pending')
+    legal_review_notes = models.TextField(blank=True)
+    legal_risk_score = models.FloatField(null=True)
+```
+
+### 6E.2 Teaming Agent Capabilities
+
+```python
+# ai_orchestrator/src/agents/teaming_agent.py
+
+class TeamingAgent:
+    """
+    Autonomous Teaming & Subcontractor Selection Agent.
+
+    Identifies, evaluates, and recommends optimal teaming arrangements for
+    each deal — considering capabilities, clearances, small business goals,
+    past teaming performance, contract vehicle access, and competitive positioning.
+    """
+
+    async def identify_teaming_needs(self, deal_id: str) -> TeamingNeedsAnalysis:
+        """
+        Analyze RFP requirements and solution architecture to identify
+        what capabilities, clearances, and certifications we need from partners.
+
+        Inputs:
+        - RFP requirements (from Compliance Agent)
+        - Solution architecture (from SA Agent)
+        - Company capability profile
+        - Small business subcontracting requirements (from Legal Agent)
+
+        Outputs:
+        - Capability gaps requiring partner support
+        - Clearance requirements we cannot fill internally
+        - Certification requirements (FedRAMP, CMMI, etc.)
+        - Small business participation targets (by category)
+        - Contract vehicle requirements
+        - Key personnel gaps
+        """
+        ...
+
+    async def search_and_rank_partners(self, needs: TeamingNeedsAnalysis) -> list[RankedPartner]:
+        """
+        Search partner database + external sources to find best matches.
+
+        Search Strategy:
+        1. Internal database (TeamingPartner records) — vector similarity on capabilities
+        2. SAM.gov entity search — find registered entities with matching NAICS/capabilities
+        3. FPDS historical data — who has won similar contracts
+        4. Deep Research Agent — market intelligence on potential partners
+        5. Past teaming history — prefer reliable partners
+
+        Ranking Algorithm (weighted scoring):
+        - Capability match (30%): How well partner capabilities fill our gaps
+        - Past performance (20%): Their relevant contract wins + CPARS ratings
+        - Clearance match (15%): Facility + personnel clearances available
+        - Reliability (10%): Our past teaming experience with them (delivery, quality)
+        - Rate competitiveness (10%): Their rates vs. budget constraints
+        - Small business value (10%): SB status value toward goal compliance
+        - Relationship maturity (5%): Existing NDA, past collaboration, contact quality
+        """
+        ...
+
+    async def optimize_team_composition(self, deal_id: str, ranked_partners: list) -> TeamComposition:
+        """
+        Optimize the overall team for competitive advantage.
+
+        Optimization Goals:
+        1. Maximize capability coverage (every RFP requirement addressed)
+        2. Maximize past performance relevance (combined team experience)
+        3. Meet small business subcontracting goals (mandatory for large businesses)
+        4. Minimize team risk (reliable partners, no conflicts)
+        5. Optimize cost (competitive rates while maintaining quality)
+        6. Ensure contract vehicle coverage (if vehicle-specific procurement)
+
+        Constraints:
+        - FAR limitation on subcontracting rules (51%/50% for various contract types)
+        - No OCI conflicts between team members (Legal Agent validates)
+        - Key personnel availability
+        - Clearance availability timelines
+        - Budget constraints from Pricing Agent
+
+        Output:
+        - Recommended team structure (prime + subs + roles)
+        - Work share allocation (WBS element → partner mapping)
+        - Key personnel assignments (partner → roles)
+        - Small business participation percentage by category
+        - Team capability matrix (requirement → partner mapping)
+        - Risk register (per partner)
+        """
+        ...
+
+    async def analyze_small_business_compliance(self, deal_id: str, team: TeamComposition) -> SBAnalysis:
+        """
+        Ensure team meets small business subcontracting plan requirements.
+
+        For large business primes, federal contracts require:
+        - Overall SB goal (typically 23%)
+        - SDB goal (typically 5%)
+        - WOSB goal (typically 5%)
+        - HUBZone goal (typically 3%)
+        - SDVOSB goal (typically 3%)
+
+        Analysis:
+        1. Parse RFP for specific SB goals (may differ from standard)
+        2. Calculate current team SB participation by category
+        3. Identify shortfalls by category
+        4. Recommend additional SB partners to fill gaps
+        5. Generate Individual Subcontracting Plan (ISP) data
+        6. Flag mentor-protégé opportunities
+        """
+        ...
+
+    async def generate_teaming_documents(self, deal_id: str, partner_id: str, doc_type: str) -> Document:
+        """
+        Generate teaming documents for Legal Agent review.
+
+        Document Types:
+        - NDA (Non-Disclosure Agreement): Standard mutual NDA
+        - LOI (Letter of Intent): Pre-proposal commitment to team
+        - Teaming Agreement: Full teaming terms (work share, IP, exclusivity, flow-downs)
+        - Subcontract Template: Draft subcontract (when we're prime)
+        - JV Operating Agreement: Joint venture terms (when applicable)
+        - Mentor-Protégé Agreement: For SBA mentor-protégé relationships
+
+        All documents:
+        1. Generated with deal-specific terms
+        2. Sent to Legal Agent for review before distribution
+        3. Tracked through negotiation lifecycle
+        4. Version-controlled with redline history
+        """
+        ...
+
+    async def assess_teaming_risk(self, deal_id: str, team: TeamComposition) -> TeamingRiskAssessment:
+        """
+        Comprehensive risk assessment of the proposed team.
+
+        Risk Categories:
+        - Performance risk: Can each partner deliver their work share?
+        - Financial risk: Is any partner at risk of financial instability?
+        - Clearance risk: Will clearance timelines cause delays?
+        - OCI risk: Any organizational conflicts? (validated by Legal Agent)
+        - Dependency risk: Over-reliance on any single partner?
+        - Key personnel risk: Are critical people actually available?
+        - Exclusivity risk: Is any partner on a competing team?
+        - Past performance risk: Any CPARs issues or protests on record?
+        - Small business risk: Any SB certifications expiring during performance?
+
+        Output: Risk matrix with likelihood × impact, mitigation for each
+        """
+        ...
+
+    async def recommend_engagement_strategy(self, partner_id: str, deal_id: str) -> EngagementPlan:
+        """
+        Recommend how to approach and engage a potential partner.
+
+        Engagement Plan:
+        - Initial outreach approach (warm intro vs cold contact)
+        - Capability briefing talking points
+        - Proposed work share overview
+        - NDA initiation (if no NDA on file)
+        - Key personnel discussion points
+        - Rate negotiation strategy (from Pricing Agent insights)
+        - Timeline and milestones for teaming agreement execution
+        """
+        ...
+
+    async def monitor_teaming_agreements(self) -> list[TeamingAlert]:
+        """
+        Ongoing monitoring of all active teaming relationships.
+
+        Monitors:
+        - NDA expiration dates (alert 60/30/7 days before)
+        - Teaming agreement compliance (work share actuals vs agreed)
+        - Partner SB certification changes
+        - Partner capability changes (new wins, new certs)
+        - Partner risk indicators (layoffs, lawsuits, financial issues)
+        - Exclusivity violations (partner appearing on competing teams)
+        """
+        ...
+```
+
+### 6E.3 Teaming Agent Integration Points
+
+```
+OPPORTUNITY SCORING → teaming feasibility score (can we build a competitive team?)
+BID/NO-BID → teaming readiness assessment (do we have partners for this?)
+CAPTURE PLANNING → recommended team composition + engagement plan
+SOLUTION ARCHITECTURE → partner capabilities feed into technical approach
+PRICING → partner rates + work share → cost model
+LEGAL → all teaming documents reviewed by Legal Agent before distribution
+PROPOSAL → team qualifications section, org charts, past performance blending
+SUBMISSION → ensure all teaming agreements executed before submission
+POST-AWARD → transition partner work share to subcontracts
+```
+
+### 6E.4 LangGraph Teaming Graph
+
+```python
+# ai_orchestrator/src/graphs/teaming_graph.py
+
+from langgraph.graph import StateGraph, END
+
+class TeamingState(TypedDict):
+    deal_id: str
+    rfp_requirements: dict
+    solution_architecture: dict
+    company_capabilities: dict
+    sb_requirements: dict
+    teaming_needs: dict
+    ranked_partners: list
+    team_composition: dict
+    sb_analysis: dict
+    risk_assessment: dict
+    documents: list
+    engagement_plans: list
+
+def build_teaming_graph():
+    graph = StateGraph(TeamingState)
+
+    graph.add_node("analyze_teaming_needs", analyze_teaming_needs)
+    graph.add_node("search_rank_partners", search_rank_partners)
+    graph.add_node("optimize_team", optimize_team_composition)
+    graph.add_node("check_sb_compliance", analyze_sb_compliance)
+    graph.add_node("assess_team_risk", assess_teaming_risk)
+    graph.add_node("check_oci", request_oci_check)          # → Legal Agent
+    graph.add_node("generate_documents", generate_teaming_docs)
+    graph.add_node("legal_review", request_legal_review)     # → Legal Agent
+    graph.add_node("plan_engagement", plan_partner_engagement)
+    graph.add_node("human_review", present_team_for_approval) # HITL gate
+
+    graph.set_entry_point("analyze_teaming_needs")
+    graph.add_edge("analyze_teaming_needs", "search_rank_partners")
+    graph.add_edge("search_rank_partners", "optimize_team")
+    graph.add_edge("optimize_team", "check_sb_compliance")
+    graph.add_edge("check_sb_compliance", "assess_team_risk")
+    graph.add_edge("assess_team_risk", "check_oci")
+    graph.add_conditional_edges("check_oci", oci_decision,
+        {"clear": "generate_documents", "conflict": "optimize_team"})  # re-optimize if OCI
+    graph.add_edge("generate_documents", "legal_review")
+    graph.add_edge("legal_review", "plan_engagement")
+    graph.add_edge("plan_engagement", "human_review")
+    graph.add_edge("human_review", END)
+
+    return graph.compile()
+```
+
+---
+
+## 6F. Phase 4F — Security & Compliance Mapping Agent
+
+> **The security controls authority.** Federal IT proposals almost always require detailed security narratives mapping specific control frameworks (NIST 800-53, 800-171, CMMC, FedRAMP, HIPAA/HITRUST) to RFP requirements. This agent goes deeper than the Solution Architect's high-level security architecture to provide control-by-control mapping, SSP narrative drafting, ATO approach narratives, and compliance evidence management. It ensures every security requirement is traceable to a specific control implementation.
+
+### 6F.1 Security Compliance Data Models
+
+```python
+# backend/apps/security_compliance/models.py
+
+class SecurityControlFramework(BaseModel):
+    """Master repository of security control frameworks."""
+    name = models.CharField(max_length=200)  # NIST 800-53, NIST 800-171, CMMC, FedRAMP, HIPAA, HITRUST
+    version = models.CharField(max_length=50)  # Rev 5, v2.0, etc.
+    description = models.TextField()
+    source_url = models.URLField(blank=True)
+
+    # Control hierarchy
+    control_families = models.JSONField(default=list)
+    # [{family_id: "AC", name: "Access Control", control_count: 25}, ...]
+
+    total_controls = models.IntegerField()
+    is_active = models.BooleanField(default=True)
+
+
+class SecurityControl(BaseModel):
+    """Individual security control within a framework."""
+    framework = models.ForeignKey(SecurityControlFramework, on_delete=models.CASCADE)
+    control_id = models.CharField(max_length=50)  # AC-1, AC-2, SC-7, etc.
+    family = models.CharField(max_length=100)  # Access Control, System & Comms Protection
+    title = models.CharField(max_length=500)
+    description = models.TextField()
+    supplemental_guidance = models.TextField(blank=True)
+
+    # Control metadata
+    priority = models.CharField(max_length=10)  # P1, P2, P3 (NIST priority)
+    baseline_impact = models.JSONField(default=list)  # [Low, Moderate, High]
+    control_type = models.CharField(max_length=50)  # technical, operational, management
+    is_required = models.BooleanField(default=True)
+
+    # Implementation guidance
+    implementation_guidance = models.TextField(blank=True)
+    assessment_objectives = models.JSONField(default=list)
+    related_controls = models.JSONField(default=list)  # Cross-references
+
+    # Embedding for RAG matching
+    control_embedding = VectorField(dimensions=1536, null=True)
+
+
+class SecurityControlMapping(BaseModel):
+    """Maps RFP security requirements to specific controls and implementation narratives."""
+    deal = models.ForeignKey('deals.Deal', on_delete=models.CASCADE)
+    rfp_requirement = models.ForeignKey('rfp.RFPRequirement', on_delete=models.CASCADE)
+    control = models.ForeignKey(SecurityControl, on_delete=models.CASCADE)
+
+    # Mapping metadata
+    mapping_confidence = models.FloatField()  # 0.0-1.0 confidence of mapping accuracy
+    mapping_rationale = models.TextField()  # Why this control maps to this requirement
+
+    # Implementation
+    implementation_status = models.CharField(max_length=30)
+    # planned, partially_implemented, implemented, inherited, not_applicable
+    implementation_narrative = models.TextField(blank=True)  # SSP-style control narrative
+    responsible_party = models.CharField(max_length=200, blank=True)  # Who implements
+    implementation_evidence = models.JSONField(default=list)  # Evidence references
+
+    # Assessment
+    assessment_method = models.CharField(max_length=50, blank=True)  # examine, interview, test
+    assessment_frequency = models.CharField(max_length=50, blank=True)  # continuous, annual, etc.
+
+
+class SecurityComplianceReport(BaseModel):
+    """Generated security compliance report for a deal."""
+    deal = models.ForeignKey('deals.Deal', on_delete=models.CASCADE)
+    report_type = models.CharField(max_length=50)
+    # ssp_section, ato_narrative, control_matrix, fedramp_package,
+    # cmmc_readiness, hipaa_mapping, security_volume_section
+
+    framework = models.ForeignKey(SecurityControlFramework, on_delete=models.CASCADE)
+    content = models.TextField()  # Generated narrative content
+
+    # Coverage metrics
+    total_applicable_controls = models.IntegerField()
+    controls_mapped = models.IntegerField()
+    controls_with_narratives = models.IntegerField()
+    coverage_percentage = models.FloatField()
+
+    # Gap analysis
+    unmapped_requirements = models.JSONField(default=list)
+    control_gaps = models.JSONField(default=list)  # Controls needed but not addressed
+    risk_items = models.JSONField(default=list)  # High-risk areas requiring attention
+
+
+class ComplianceEvidenceLibrary(BaseModel):
+    """Reusable evidence artifacts that demonstrate control implementation."""
+    control = models.ForeignKey(SecurityControl, on_delete=models.CASCADE)
+    evidence_type = models.CharField(max_length=50)  # policy, procedure, screenshot, config, test_result, audit_report
+    title = models.CharField(max_length=500)
+    description = models.TextField()
+    document = models.FileField(upload_to='compliance_evidence/', blank=True)
+    is_reusable = models.BooleanField(default=True)  # Can be used across proposals
+    last_validated = models.DateField(null=True)
+```
+
+### 6F.2 Security Compliance Agent Capabilities
+
+```python
+# ai_orchestrator/src/agents/security_compliance_agent.py
+
+class SecurityComplianceAgent:
+    """
+    Autonomous Security & Compliance Mapping Agent.
+
+    Performs deep control-by-control mapping of security frameworks
+    to RFP requirements, drafts SSP narratives, generates ATO approach
+    documentation, and ensures complete security compliance traceability
+    in proposals.
+    """
+
+    async def identify_security_requirements(self, deal_id: str) -> SecurityRequirementsAnalysis:
+        """
+        Deep analysis of RFP to extract ALL security-related requirements.
+
+        Scans for:
+        - Explicit security requirements (Section L/M instructions)
+        - Referenced frameworks (NIST, FedRAMP, CMMC, HIPAA, HITRUST)
+        - Impact level (Low/Moderate/High for FISMA)
+        - CMMC maturity level required
+        - FedRAMP authorization requirements
+        - Data handling requirements (PII, PHI, CUI, classified)
+        - Facility/personnel clearance requirements
+        - Specific clauses: DFARS 252.204-7012 (CUI), FAR 52.239-1 (privacy)
+        - Cloud security requirements (FedRAMP, IL levels for DoD)
+        - Continuous monitoring requirements
+        - Supply chain risk management (SCRM)
+        - Incident response requirements
+        - Privacy requirements (SORN, PIA, Privacy Act)
+
+        Output: Categorized security requirements with framework mappings
+        """
+        ...
+
+    async def determine_applicable_frameworks(self, security_reqs: SecurityRequirementsAnalysis) -> list[ApplicableFramework]:
+        """
+        Determine which security frameworks apply and at what level.
+
+        Logic:
+        - Federal civilian → NIST 800-53 (Low/Moderate/High) + FedRAMP
+        - DoD → NIST 800-171 + CMMC Level 2/3 + DFARS 7012
+        - Healthcare → HIPAA Security Rule + HITRUST CSF
+        - Financial → SOC 2 Type II + PCI DSS (if payment)
+        - Intelligence → ICD 503 + CNSSI 1253
+        - Cloud hosting → FedRAMP (Low/Moderate/High) or DoD IL2/4/5/6
+        - Any CUI → NIST 800-171 minimum
+
+        Output: Ordered list of frameworks with applicability rationale
+        """
+        ...
+
+    async def map_requirements_to_controls(self, deal_id: str) -> ControlMappingResult:
+        """
+        Core mapping engine: RFP requirement → security control(s).
+
+        Process:
+        1. For each security requirement, identify matching controls via:
+           - Semantic similarity (RAG search on control descriptions)
+           - Keyword matching (control IDs referenced in RFP)
+           - Framework baseline lookup (all controls at the required impact level)
+        2. Score mapping confidence (0.0-1.0)
+        3. Identify many-to-many relationships (one requirement → multiple controls)
+        4. Flag unmapped requirements (gaps)
+        5. Identify overlapping controls across frameworks (cross-walk)
+
+        Output: Complete requirement-to-control mapping matrix with confidence scores
+        """
+        ...
+
+    async def draft_control_narratives(self, deal_id: str, control_id: str) -> ControlNarrative:
+        """
+        Draft SSP-style implementation narrative for a specific control.
+
+        Narrative Structure (per NIST SP 800-18):
+        - Control description (what the control requires)
+        - Implementation status (implemented/partially/planned/inherited/N/A)
+        - Implementation description (HOW we implement this control)
+           - Uses SA Agent's solution architecture for technical specifics
+           - References specific technologies, configurations, processes
+        - Responsible role/organization
+        - How inherited controls are provided (if cloud/shared services)
+        - Evidence references (policies, procedures, configurations)
+        - Assessment method and frequency
+
+        For proposal use:
+        - Adapts language for evaluator audience (not auditor)
+        - Weaves in win themes and discriminators
+        - References past performance on similar security implementations
+        - Highlights innovation (zero trust, AI-powered monitoring, etc.)
+        """
+        ...
+
+    async def generate_ssp_sections(self, deal_id: str) -> SSPDocument:
+        """
+        Generate System Security Plan sections for the proposal.
+
+        SSP Sections:
+        1. System Identification and Overview
+        2. System Environment and Boundary
+        3. System Interconnections
+        4. Security Control Implementation Details (all applicable controls)
+        5. Continuous Monitoring Strategy
+        6. POA&M (Plan of Action & Milestones) approach
+        7. Incident Response Plan summary
+        8. Configuration Management approach
+        9. Contingency Plan summary
+        10. Access Control narrative
+
+        Pulls from:
+        - SA Agent's system architecture (boundary diagrams, data flows)
+        - Solution architecture details (technologies, configurations)
+        - Company's existing compliance evidence library
+        - Past SSPs from winning proposals (Knowledge Vault)
+        """
+        ...
+
+    async def generate_ato_approach(self, deal_id: str) -> ATOApproachDocument:
+        """
+        Draft the Authority to Operate (ATO) approach narrative.
+
+        Includes:
+        - ATO strategy (full ATO vs ongoing authorization vs reciprocity)
+        - FedRAMP authorization path (if applicable)
+        - ISSO/ISSM staffing plan
+        - Security assessment timeline and milestones
+        - POA&M management approach
+        - Continuous monitoring plan (ConMon)
+        - Tools and automation (vulnerability scanning, SIEM, SOAR)
+        - Security documentation deliverables schedule
+        - Relationship with agency AO and ISSO
+        """
+        ...
+
+    async def generate_cmmc_readiness(self, deal_id: str, level: int) -> CMMCReadinessReport:
+        """
+        Assess and document CMMC readiness.
+
+        CMMC Level 2 (110 practices from NIST 800-171):
+        - Map all 110 practices to implementation status
+        - Identify gaps requiring remediation
+        - Draft SSP for CUI handling
+        - POA&M for any gaps
+        - Timeline to achieve certification
+
+        CMMC Level 3 (additional 24 enhanced security requirements):
+        - Additional controls assessment
+        - DIBCAC assessment preparation
+        """
+        ...
+
+    async def cross_walk_frameworks(self, frameworks: list[str]) -> CrossWalkMatrix:
+        """
+        Generate cross-walk matrix between multiple frameworks.
+
+        When an RFP requires compliance with multiple frameworks (e.g.,
+        NIST 800-53 + FedRAMP + HIPAA), many controls overlap.
+
+        Cross-walk shows:
+        - NIST 800-53 AC-2 ↔ FedRAMP AC-2 ↔ HIPAA §164.312(a)(1)
+        - One implementation narrative satisfying multiple frameworks
+        - Gaps unique to each framework
+        - Efficiency: "implementing X controls satisfies Y across all frameworks"
+        """
+        ...
+
+    async def assess_compliance_gaps(self, deal_id: str) -> ComplianceGapAnalysis:
+        """
+        Identify security compliance gaps in our proposed solution.
+
+        Analysis:
+        - Controls required but not addressed in solution architecture
+        - Controls we claim to implement but lack evidence for
+        - Inherited controls requiring provider documentation (AWS, Azure)
+        - POA&M candidates (controls we'll implement post-award)
+        - Risk ratings for each gap (Low/Moderate/High)
+        - Recommended remediation for each gap
+        - Cost/timeline estimates for remediation
+
+        Feeds back to SA Agent for solution refinement.
+        """
+        ...
+
+    async def generate_security_volume_section(self, deal_id: str) -> ProposalSection:
+        """
+        Generate the complete security section for the proposal.
+
+        Sections:
+        1. Security Approach Overview (executive summary)
+        2. Security Architecture (references SA diagrams)
+        3. Compliance Framework Mapping (matrix + narratives)
+        4. Access Control & Identity Management
+        5. Data Protection & Encryption
+        6. Network Security & Boundary Protection
+        7. Continuous Monitoring & Incident Response
+        8. Supply Chain Risk Management
+        9. Security Staffing (ISSO, Security Engineers)
+        10. ATO Approach & Timeline
+        11. Security Innovation (zero trust, AI-powered security, etc.)
+
+        Each section:
+        - Maps to specific evaluation criteria
+        - References specific controls being implemented
+        - Includes win themes from Marketing Agent
+        - References relevant past performance
+        """
+        ...
+
+    async def validate_security_claims(self, deal_id: str) -> ValidationReport:
+        """
+        Self-validate all security claims in the proposal.
+
+        Checks:
+        - Every security requirement has a mapped control ✓/✗
+        - Every control has an implementation narrative ✓/✗
+        - Implementation narratives are consistent with SA architecture ✓/✗
+        - No contradictions between security sections ✓/✗
+        - Evidence library covers claimed implementations ✓/✗
+        - Clearance levels match what's proposed ✓/✗
+        - Cloud security posture matches FedRAMP/IL requirements ✓/✗
+        - All compliance matrices are complete ✓/✗
+        """
+        ...
+```
+
+### 6F.3 Security Knowledge Base (RAG-Indexed)
+
+```
+Pre-loaded and continuously updated:
+
+FRAMEWORKS (Full Text, Chunked + Embedded):
+├── NIST SP 800-53 Rev 5 (1,189 controls across 20 families)
+├── NIST SP 800-171 Rev 2/3 (110 CUI security requirements)
+├── FedRAMP Security Assessment Framework (baselines: Low/Moderate/High)
+├── CMMC v2.0 Model (Levels 1-3, practices + assessment objectives)
+├── HIPAA Security Rule (§164.302-318, administrative/physical/technical safeguards)
+├── HITRUST CSF (14 control categories)
+├── SOC 2 Trust Service Criteria
+├── PCI DSS v4.0
+├── ICD 503 / CNSSI 1253 (IC systems)
+└── NIST Cybersecurity Framework (CSF) v2.0
+
+CROSS-WALKS:
+├── NIST 800-53 ↔ FedRAMP ↔ 800-171 ↔ CMMC
+├── NIST 800-53 ↔ HIPAA ↔ HITRUST
+├── NIST CSF ↔ 800-53 ↔ ISO 27001
+└── FedRAMP ↔ DoD IL2/4/5/6
+
+TEMPLATES:
+├── SSP templates (by impact level)
+├── POA&M templates
+├── ATO package templates
+├── Control narrative templates (per control family)
+├── Continuous monitoring plan templates
+├── Incident response plan templates
+└── Configuration management plan templates
+
+EVIDENCE LIBRARY:
+├── Company security policies (reusable across proposals)
+├── Past security implementation evidence
+├── Tool configurations (SIEM, scanning, endpoint)
+└── Past winning security narratives
+```
+
+### 6F.4 LangGraph Security Compliance Graph
+
+```python
+# ai_orchestrator/src/graphs/security_compliance_graph.py
+
+from langgraph.graph import StateGraph, END
+
+class SecurityComplianceState(TypedDict):
+    deal_id: str
+    rfp_requirements: list
+    solution_architecture: dict
+    security_requirements: dict
+    applicable_frameworks: list
+    control_mappings: list
+    control_narratives: list
+    ssp_sections: dict
+    ato_approach: dict
+    gap_analysis: dict
+    security_volume: dict
+    validation_report: dict
+
+def build_security_compliance_graph():
+    graph = StateGraph(SecurityComplianceState)
+
+    graph.add_node("identify_security_reqs", identify_security_requirements)
+    graph.add_node("determine_frameworks", determine_applicable_frameworks)
+    graph.add_node("map_controls", map_requirements_to_controls)
+    graph.add_node("draft_narratives", draft_control_narratives)
+    graph.add_node("cross_walk", cross_walk_frameworks)
+    graph.add_node("assess_gaps", assess_compliance_gaps)
+    graph.add_node("generate_ssp", generate_ssp_sections)
+    graph.add_node("generate_ato", generate_ato_approach)
+    graph.add_node("generate_security_volume", generate_security_volume_section)
+    graph.add_node("validate_claims", validate_security_claims)
+    graph.add_node("refine_solution", feedback_to_sa_agent)  # → SA Agent for gap fixes
+
+    graph.set_entry_point("identify_security_reqs")
+    graph.add_edge("identify_security_reqs", "determine_frameworks")
+    graph.add_edge("determine_frameworks", "map_controls")
+    graph.add_edge("map_controls", "draft_narratives")
+    graph.add_edge("draft_narratives", "cross_walk")
+    graph.add_edge("cross_walk", "assess_gaps")
+    graph.add_conditional_edges("assess_gaps", has_critical_gaps,
+        {"critical_gaps": "refine_solution", "acceptable": "generate_ssp"})
+    graph.add_edge("refine_solution", "map_controls")  # Re-map after SA updates
+    graph.add_edge("generate_ssp", "generate_ato")
+    graph.add_edge("generate_ato", "generate_security_volume")
+    graph.add_edge("generate_security_volume", "validate_claims")
+    graph.add_conditional_edges("validate_claims", validation_decision,
+        {"pass": END, "issues": "draft_narratives"})  # Refine narratives if issues
+
+    return graph.compile()
+```
+
+### 6F.5 Security Compliance Agent Integration Points
+
+```
+RFP PARSING → security requirements extracted and classified
+SOLUTION ARCHITECT → provides system architecture; receives gap feedback for refinement
+LEGAL AGENT → FAR/DFARS security clauses (DFARS 7012, FAR 52.239-1) fed into control mapping
+TEAMING AGENT → partner clearance levels + shared responsibility model
+PRICING AGENT → security staffing (ISSO, engineers) and tools factored into cost model
+PROPOSAL WRITER → security volume section ready for inclusion
+COMPLIANCE AGENT → security compliance items merged into master compliance matrix
+PAST PERFORMANCE → security-relevant past performance for narrative support
+KNOWLEDGE VAULT → past SSPs, security narratives, evidence artifacts
+```
+
+---
+
 ## 7. Phase 5 — Past Performance Vault
 
 ### 7.1 Past Performance Data Model
@@ -2354,7 +3156,174 @@ YOUR KNOWLEDGE BASE (upload all of this):
     └── ... forward-looking material
 ```
 
-### 8.4 Review Workflow
+### 8.4 Fully Autonomous Management Volume Engine
+
+> **Volume II done right.** While the Solutions Architect Agent produces best-in-class Volume I (Technical), the Management Volume (Volume II) is equally critical for evaluation scoring. This enhanced capability gives the Proposal Writer Agent the same depth for management approach — org charts, staffing plans, transition strategy, PM methodology, quality assurance, and risk management — all generated from deal context, team composition, and company methodology.
+
+#### 8.4.1 Management Volume Capabilities
+
+```python
+# Integrated into: ai_orchestrator/src/agents/proposal_writer.py (enhanced)
+
+class ManagementVolumeEngine:
+    """
+    Deep management volume generation engine integrated into the Proposal Writer Agent.
+    Produces proposal-ready Volume II content with the same rigor as the SA's Volume I.
+    """
+
+    async def generate_management_approach(self, deal_id: str) -> ManagementApproach:
+        """
+        Generate comprehensive management approach narrative.
+
+        Inputs:
+        - RFP management requirements (from Compliance Agent)
+        - Solution architecture (from SA Agent — informs management structure)
+        - Team composition (from Teaming Agent — who does what)
+        - Company PM methodology (from Knowledge Vault)
+        - Win themes (from Marketing Agent)
+
+        Output — Management Approach Sections:
+        1. Management Philosophy & Framework
+           - PM methodology (Agile, SAFe, Hybrid, PMI-aligned)
+           - Governance framework (PMO structure, steering committee)
+           - Communication management plan
+           - Decision escalation procedures
+        2. Organizational Structure & Key Personnel
+           - Org chart generation (hierarchical, matrix, or hybrid)
+           - Key personnel narratives (PM, Technical Lead, SMEs)
+           - Roles & responsibilities matrix (RACI)
+           - Succession planning
+        3. Staffing Plan
+           - Staffing timeline by month (ramp-up, steady state, ramp-down)
+           - Labor category mix by WBS element
+           - Staff augmentation approach (if applicable)
+           - Recruitment & retention strategy for cleared personnel
+           - On-site vs remote vs offshore distribution
+        4. Transition-In Plan
+           - Knowledge transfer approach (from incumbent or from scratch)
+           - 30/60/90-day transition milestones
+           - Risk mitigation during transition
+           - Parallel operations period (if required)
+           - Deliverables during transition
+        5. Transition-Out Plan
+           - Knowledge transfer to successor
+           - Documentation and artifact handover
+           - Data migration and cleanup
+           - Personnel transition support
+        """
+        ...
+
+    async def generate_quality_assurance_plan(self, deal_id: str) -> QAPlan:
+        """
+        Generate Quality Assurance & Quality Control plan.
+
+        Includes:
+        - QA philosophy and standards (ISO 9001, CMMI, etc.)
+        - Quality management organization (QA lead, inspectors)
+        - Quality gates and review checkpoints
+        - Defect tracking and resolution process
+        - Metrics and KPIs (defect density, SLA compliance, MTTR)
+        - Continuous process improvement (Kaizen, Six Sigma, retrospectives)
+        - Deliverable quality review process
+        - Customer satisfaction measurement approach
+        """
+        ...
+
+    async def generate_risk_management_plan(self, deal_id: str) -> RiskPlan:
+        """
+        Generate Risk Management approach for the proposal.
+
+        Includes:
+        - Risk management methodology (PMI-aligned)
+        - Risk identification approach (SWOT, brainstorming, Delphi)
+        - Risk assessment matrix (5x5 probability × impact)
+        - Top 10 risks with mitigations (populated from deal context)
+        - Risk monitoring and reporting frequency
+        - Risk owner assignments
+        - Risk reserve/contingency approach
+        - Risk register template
+        """
+        ...
+
+    async def generate_org_chart(self, deal_id: str) -> OrgChartDiagram:
+        """
+        Generate organizational chart diagram.
+
+        Uses:
+        - Teaming Agent team composition (prime + sub structure)
+        - Key personnel assignments
+        - RFP organizational requirements
+        - Company standard PMO structure
+
+        Outputs:
+        - Mermaid.js org chart (rendered to SVG/PNG)
+        - Interactive D2 org chart with role details
+        - Color-coded by: prime/sub, clearance level, on-site/remote
+        - Lines of authority and reporting relationships
+        - Government interfaces (COR, CO, ISSO)
+        """
+        ...
+
+    async def generate_staffing_timeline(self, deal_id: str) -> StaffingVisualization:
+        """
+        Generate month-by-month staffing plan visualization.
+
+        Outputs:
+        - Staffing ramp chart (FTEs by month, by role)
+        - WBS-to-staffing mapping table
+        - Labor category mix chart (senior/mid/junior ratio over time)
+        - Prime vs sub staffing breakdown
+        - Clearance pipeline timeline (if personnel need new clearances)
+        - Gantt-style work schedule with staffing overlay
+        """
+        ...
+
+    async def generate_wbs_chart(self, deal_id: str) -> WBSDiagram:
+        """
+        Generate Work Breakdown Structure diagram.
+
+        Uses SA Agent's solution components + management tasks to produce:
+        - Hierarchical WBS diagram (Mermaid/D2)
+        - WBS dictionary (description of each element)
+        - WBS-to-staffing mapping
+        - WBS-to-deliverable mapping
+        - WBS-to-schedule mapping
+        """
+        ...
+
+    async def generate_schedule(self, deal_id: str) -> ScheduleDiagram:
+        """
+        Generate Integrated Master Schedule (IMS) / project timeline.
+
+        Outputs:
+        - Gantt chart (Mermaid.js rendered)
+        - Critical path identification
+        - Milestone chart
+        - Phase gates and deliverable dates
+        - Dependencies between WBS elements
+        - Government review/approval periods
+        """
+        ...
+```
+
+#### 8.4.2 Management Graphics Generation
+
+The Management Volume Engine generates the following graphics (same quality as SA's 14+ technical diagrams):
+
+| Graphic | Tool | Description |
+|---------|------|-------------|
+| **Org Chart** | Mermaid/D2 | Hierarchical reporting structure with prime, subs, govt interfaces |
+| **Staffing Plan** | Mermaid/D2 | Month-by-month FTE chart with ramp-up and steady state |
+| **WBS Chart** | Mermaid/D2 | Work breakdown structure with 3-4 levels of decomposition |
+| **IMS / Gantt** | Mermaid | Integrated master schedule with critical path and milestones |
+| **RACI Matrix** | Table | Responsibility assignment matrix for key activities |
+| **Risk Matrix** | D2 | 5x5 probability × impact matrix with top risks plotted |
+| **Transition Timeline** | Mermaid | 30/60/90-day transition roadmap with parallel operations |
+| **Communication Flow** | D2 | Governance and communication structure diagram |
+| **Quality Process Flow** | Mermaid | QA/QC process with review gates and feedback loops |
+| **Escalation Path** | D2 | Issue escalation and decision authority hierarchy |
+
+### 8.5 Review Workflow
 
 ```
 Writer → Pink Team → Update → Red Team → Update → Gold Team → Final → Submit
@@ -2805,6 +3774,8 @@ ai_orchestrator/
 │   │   │   ├── marketing_sales_agent.py # Marketing & Sales Expert Agent
 │   │   │   ├── deep_research_agent.py   # Deep Research Agent
 │   │   │   ├── legal_agent.py           # Business Legal Agent (NEW)
+│   │   │   ├── teaming_agent.py        # Teaming & Subcontractor Selection Agent (NEW)
+│   │   │   ├── security_compliance_agent.py # Security & Compliance Mapping Agent (NEW)
 │   │   │   ├── opportunity_scout.py     # Scans & scores opportunities
 │   │   │   ├── rfp_parser.py            # Extracts RFP requirements
 │   │   │   ├── compliance_agent.py      # Builds compliance matrix
@@ -2815,7 +3786,7 @@ ai_orchestrator/
 │   │   │   ├── qa_agent.py              # Quality & consistency checker
 │   │   │   ├── submission_agent.py      # Package & checklist builder
 │   │   │   ├── contract_agent.py        # Contract drafting (uses Legal Agent)
-│   │   │   ├── communication_agent.py   # Emails, Q&A, narratives
+│   │   │   ├── communication_agent.py   # Emails, Q&A tracking, clarifications, narratives (UPGRADED)
 │   │   │   └── learning_agent.py        # Policy updates from outcomes
 │   │   ├── mcp_servers/
 │   │   │   ├── samgov_tools.py          # SAM.gov API tools
@@ -2828,8 +3799,11 @@ ai_orchestrator/
 │   │   │   ├── competitive_intel_tools.py # FPDS/USASpending/competitor tools (NEW)
 │   │   │   ├── market_rate_tools.py     # GSA rates, salary data, benchmarks
 │   │   │   ├── legal_tools.py          # Legal RAG, clause library, compliance, OCI (NEW)
+│   │   │   ├── teaming_tools.py       # Partner search, matching, SB analysis (NEW)
+│   │   │   ├── security_compliance_tools.py # Control mapping, SSP generation, framework RAG (NEW)
 │   │   │   ├── template_render.py       # DOCX/PDF/PPTX/CSV generation
 │   │   │   ├── email_tools.py           # Email drafting & sending
+│   │   │   ├── qa_tracking_tools.py     # Q&A log, clarification tracking, impact mapping (NEW)
 │   │   │   ├── workflow_tools.py        # Stage transitions & tasks
 │   │   │   └── pricing_tools.py         # Rate card, LOE calc, cost model
 │   │   ├── graphs/
@@ -2841,6 +3815,8 @@ ai_orchestrator/
 │   │   │   ├── proposal_graph.py        # Full proposal generation flow
 │   │   │   ├── pricing_graph.py         # Intelligent pricing optimization
 │   │   │   ├── legal_graph.py          # Legal ReAct agent pipeline (NEW)
+│   │   │   ├── teaming_graph.py       # Teaming selection & optimization pipeline (NEW)
+│   │   │   ├── security_compliance_graph.py # Security control mapping pipeline (NEW)
 │   │   │   └── contract_graph.py        # Contract generation flow (uses Legal Agent)
 │   ├── rag/
 │   │   ├── embeddings.py          # Embedding generation
@@ -2955,7 +3931,34 @@ EVENTS = {
     "ProtestAssessed":           {"source": "legal_agent", "data": "protest viability assessment"},
     "RegulatoryAlertIssued":     {"source": "legal_agent", "data": "new FAR/DFARS rule alert"},
 
+    # ── Teaming & Subcontractor Events (NEW) ─────────────
+    "TeamingNeedsAnalyzed":      {"source": "teaming_agent", "data": "capability gaps + partner requirements"},
+    "PartnersRanked":            {"source": "teaming_agent", "data": "ranked partner recommendations"},
+    "TeamCompositionOptimized":  {"source": "teaming_agent", "data": "proposed team structure + work share"},
+    "SBComplianceAnalyzed":      {"source": "teaming_agent", "data": "small business goal analysis"},
+    "TeamingRiskAssessed":       {"source": "teaming_agent", "data": "team risk matrix + mitigations"},
+    "TeamingDocGenerated":       {"source": "teaming_agent", "data": "NDA/LOI/teaming agreement draft"},
+    "TeamApproved":              {"source": "human", "data": "team composition approved (HITL)"},
+    "TeamingAlertRaised":        {"source": "teaming_agent", "data": "NDA expiry, partner risk, exclusivity violation"},
+
+    # ── Security & Compliance Mapping Events (NEW) ────────
+    "SecurityReqsIdentified":    {"source": "security_compliance_agent", "data": "classified security requirements"},
+    "FrameworksDetermined":      {"source": "security_compliance_agent", "data": "applicable frameworks + levels"},
+    "ControlsMapped":            {"source": "security_compliance_agent", "data": "requirement-to-control mapping matrix"},
+    "ControlNarrativesDrafted":  {"source": "security_compliance_agent", "data": "SSP-style implementation narratives"},
+    "ComplianceGapsFound":       {"source": "security_compliance_agent", "data": "gap analysis + remediation plan"},
+    "SSPSectionsGenerated":      {"source": "security_compliance_agent", "data": "system security plan sections"},
+    "ATOApproachReady":          {"source": "security_compliance_agent", "data": "ATO approach narrative"},
+    "SecurityVolumeReady":       {"source": "security_compliance_agent", "data": "proposal security section"},
+    "SecurityValidated":         {"source": "security_compliance_agent", "data": "security claims validation report"},
+
+    # ── Q&A & Clarification Events (NEW) ──────────────────
+    "ClarificationsDrafted":     {"source": "communication_agent", "data": "prioritized vendor questions for CO"},
+    "ClarificationAnswered":     {"source": "communication_agent", "data": "CO answer + impact assessment"},
+    "QAImpactMapped":            {"source": "communication_agent", "data": "answer → compliance/pricing changes"},
+
     # ── Proposal & Review Events ───────────────────────────
+    "ManagementVolumeReady":     {"source": "proposal_writer", "data": "Volume II draft with org charts + staffing"},
     "SectionDrafted":            {"source": "proposal_writer", "data": "section content"},
     "QAComplete":                {"source": "qa_agent", "data": "issues found"},
 
@@ -3084,6 +4087,18 @@ class GoalSetting(models.Model):
 - `LegalEvaluation` (quality evaluation scores — tool correctness, task completion, coverage)
 - `RegulatoryAlert` (monitored FAR/DFARS rule changes affecting active deals)
 
+### Teaming & Subcontractors (NEW)
+- `TeamingPartner` (partner database: capabilities, clearances, NAICS, SB status, reliability score, contract vehicles, rates)
+- `TeamingRecommendation` (AI-recommended team composition per deal: partners, work share, SB analysis, risk)
+- `TeamingAgreement` (NDA/LOI/teaming agreement tracking: status, terms, legal review, expiry)
+
+### Security & Compliance Mapping (NEW)
+- `SecurityControlFramework` (NIST 800-53, 800-171, FedRAMP, CMMC, HIPAA, HITRUST — with versions)
+- `SecurityControl` (individual controls: ID, family, description, priority, baselines, implementation guidance)
+- `SecurityControlMapping` (per-deal: RFP requirement → control → narrative → evidence → status)
+- `SecurityComplianceReport` (generated reports: SSP sections, ATO approach, control matrix, gap analysis)
+- `ComplianceEvidenceLibrary` (reusable evidence artifacts: policies, procedures, configs, test results)
+
 ### Opportunity Intelligence
 - `OpportunitySource` (SAM.gov, labs, etc.)
 - `Opportunity` (normalized, with embeddings)
@@ -3142,10 +4157,14 @@ class GoalSetting(models.Model):
 - `ContractClause` (library + risk levels)
 - `ContractVersion` (redline history)
 
-### Communications
+### Communications & Q&A Management (UPGRADED)
 - `EmailDraft` (AI-generated, human-approved)
-- `ClarificationQuestion` (Q&A submissions)
-- `ClientInteraction` (log of all communications)
+- `ClarificationQuestion` (structured Q&A: question text, category, status, RFP section ref, submitted date)
+- `ClarificationAnswer` (CO answer text, received date, impact assessment, affected requirements)
+- `QAImpactMapping` (links answers → ComplianceMatrixItem changes + PricingScenario assumption updates)
+- `QALog` (complete Q&A audit trail: question → submission → answer → impact → action taken)
+- `ClientInteraction` (log of all communications with sentiment + relationship score)
+- `VendorQuestionStrategy` (AI-prioritized list of questions to ask CO, ranked by information value)
 
 ### AI System
 - `AIPolicy` (autonomy rules)
@@ -3304,6 +4323,35 @@ ai-deal-manager/
 │       │   ├── management/commands/
 │       │   │   └── seed_legal_kb.py     # Seed FAR clauses, GAO decisions, precedents
 │       │   └── tasks.py             # Async legal analysis tasks (Celery)
+│       ├── teaming/                         # Teaming & Subcontractors (NEW)
+│       │   ├── models.py            # TeamingPartner, TeamingRecommendation, TeamingAgreement
+│       │   ├── serializers.py
+│       │   ├── views.py
+│       │   ├── urls.py
+│       │   ├── services/
+│       │   │   ├── partner_matcher.py     # RAG-based partner search + ranking
+│       │   │   ├── team_optimizer.py      # Team composition optimization
+│       │   │   ├── sb_analyzer.py         # Small business goal compliance
+│       │   │   ├── risk_assessor.py       # Teaming risk assessment
+│       │   │   └── agreement_generator.py # NDA/LOI/teaming agreement drafting
+│       │   ├── management/commands/
+│       │   │   └── seed_partners.py       # Import partner database
+│       │   └── tasks.py             # Async partner search + analysis (Celery)
+│       ├── security_compliance/             # Security & Compliance Mapping (NEW)
+│       │   ├── models.py            # SecurityControlFramework, SecurityControl, SecurityControlMapping
+│       │   ├── serializers.py
+│       │   ├── views.py
+│       │   ├── urls.py
+│       │   ├── services/
+│       │   │   ├── control_mapper.py      # Requirement-to-control mapping engine
+│       │   │   ├── narrative_drafter.py   # SSP-style control narrative generation
+│       │   │   ├── framework_rag.py       # Security framework RAG search
+│       │   │   ├── cross_walker.py        # Framework cross-walk matrix
+│       │   │   ├── gap_analyzer.py        # Compliance gap analysis
+│       │   │   └── ssp_generator.py       # SSP/ATO document generation
+│       │   ├── management/commands/
+│       │   │   └── seed_frameworks.py     # Seed NIST 800-53, 800-171, FedRAMP, CMMC, HIPAA controls
+│       │   └── tasks.py             # Async control mapping + narrative gen (Celery)
 │       ├── knowledge_vault/              # Multimodal Knowledge Vault
 │       │   ├── models.py            # KnowledgeVault, KnowledgeChunk
 │       │   ├── serializers.py
@@ -3314,11 +4362,15 @@ ai-deal-manager/
 │       │   │   ├── multimodal_rag.py # Text + image retrieval
 │       │   │   └── image_embedder.py # CLIP embeddings for diagrams/images
 │       │   └── tasks.py             # Async embedding generation
-│       ├── communications/
-│       │   ├── models.py
+│       ├── communications/               # Communications & Q&A (UPGRADED)
+│       │   ├── models.py            # EmailDraft, ClarificationQuestion, ClarificationAnswer, QALog
 │       │   ├── serializers.py
 │       │   ├── views.py
-│       │   └── urls.py
+│       │   ├── urls.py
+│       │   └── services/
+│       │       ├── qa_tracker.py        # Q&A lifecycle management
+│       │       ├── impact_mapper.py     # Map CO answers → compliance/pricing changes
+│       │       └── question_strategist.py # AI-prioritized clarification questions
 │       ├── policies/
 │       │   ├── models.py            # AIPolicy, GoalSetting
 │       │   ├── serializers.py
@@ -3355,6 +4407,8 @@ ai-deal-manager/
 │       │   ├── marketing/            # Capture strategy & competitive intelligence (NEW)
 │       │   ├── research/             # Deep research workspace
 │       │   ├── legal/               # Legal workspace & clause library (NEW)
+│       │   ├── teaming/            # Teaming partner database & team builder (NEW)
+│       │   ├── security-compliance/ # Security control mapping & SSP workspace (NEW)
 │       │   ├── analytics/
 │       │   ├── settings/
 │       │   └── admin/
@@ -3522,7 +4576,55 @@ ai-deal-manager/
 - [ ] Frontend: Legal chat interface (ReAct-powered legal Q&A)
 - [ ] Regulatory change monitoring (via Deep Research Agent)
 
-### Sprint 9-10: Deal Pipeline (Phase 3)
+### Sprint 9: Teaming & Subcontractor Selection Agent (Phase 4E — NEW)
+- [ ] TeamingPartner, TeamingRecommendation, TeamingAgreement models
+- [ ] Partner database: CRUD, bulk import, capability embeddings for RAG matching
+- [ ] Teaming Agent: identify teaming needs from RFP + SA solution
+- [ ] Teaming Agent: partner search & ranking (internal DB + SAM.gov + FPDS)
+- [ ] Teaming Agent: team composition optimization (capability coverage + cost)
+- [ ] Teaming Agent: small business subcontracting goal compliance analysis
+- [ ] Teaming Agent: work share optimization + limitation on subcontracting check
+- [ ] Teaming Agent: teaming risk assessment (per partner + overall team)
+- [ ] Teaming Agent: OCI check integration with Legal Agent
+- [ ] Teaming Agent: NDA/LOI/teaming agreement generation → Legal Agent review
+- [ ] Teaming Agent: partner engagement strategy recommendation
+- [ ] Teaming Agent: ongoing agreement monitoring (expiry, compliance, risks)
+- [ ] MCP tools: teaming_tools.py (partner search, SB analysis, work share calc)
+- [ ] LangGraph teaming_graph.py (full pipeline with OCI loop + HITL approval)
+- [ ] Frontend: Partner database management (add, edit, import, search)
+- [ ] Frontend: Team builder workspace (drag-and-drop team composition)
+- [ ] Frontend: SB compliance dashboard (goals vs actuals by category)
+- [ ] Frontend: Teaming agreement tracker (status, expiry, alerts)
+
+### Sprint 10: Security & Compliance Mapping Agent (Phase 4F — NEW)
+- [ ] SecurityControlFramework, SecurityControl, SecurityControlMapping models
+- [ ] Seed NIST SP 800-53 Rev 5 control library (1,189 controls, 20 families)
+- [ ] Seed NIST SP 800-171 Rev 2/3 (110 CUI security requirements)
+- [ ] Seed FedRAMP baselines (Low/Moderate/High)
+- [ ] Seed CMMC v2.0 practices and assessment objectives
+- [ ] Seed HIPAA Security Rule controls + HITRUST CSF
+- [ ] Seed framework cross-walks (NIST ↔ FedRAMP ↔ CMMC ↔ HIPAA)
+- [ ] Security Agent: identify & classify security requirements from RFP
+- [ ] Security Agent: determine applicable frameworks and impact levels
+- [ ] Security Agent: requirement-to-control mapping (RAG + keyword + baseline)
+- [ ] Security Agent: draft SSP-style control implementation narratives
+- [ ] Security Agent: cross-walk multiple frameworks (deduplicate controls)
+- [ ] Security Agent: compliance gap analysis + remediation recommendations
+- [ ] Security Agent: generate SSP sections (10 standard sections)
+- [ ] Security Agent: generate ATO approach narrative
+- [ ] Security Agent: CMMC readiness assessment (Level 2/3)
+- [ ] Security Agent: generate security proposal section (Volume I security content)
+- [ ] Security Agent: validate security claims against solution architecture
+- [ ] Security Agent: feedback loop to SA Agent for gap remediation
+- [ ] ComplianceEvidenceLibrary: evidence CRUD + reuse across proposals
+- [ ] MCP tools: security_compliance_tools.py (control search, mapping, narrative gen)
+- [ ] LangGraph security_compliance_graph.py (full pipeline with gap→refinement loop)
+- [ ] Frontend: Security compliance workspace (framework browser, control matrix)
+- [ ] Frontend: Control mapping viewer (requirement ↔ control with narratives)
+- [ ] Frontend: Compliance gap dashboard (coverage %, gaps, risk colors)
+- [ ] Frontend: Evidence library manager (upload, tag, link to controls)
+
+### Sprint 11-12: Deal Pipeline (Phase 3)
 - [ ] Deal model + workflow state machine
 - [ ] Task & checklist system with templates
 - [ ] Approval system with HITL gates (now includes strategic score)
@@ -3530,7 +4632,7 @@ ai-deal-manager/
 - [ ] Frontend: Deal detail page with timeline
 - [ ] Notifications (in-app + email) for stage changes
 
-### Sprint 11-12: RFP & Past Performance (Phase 4-5)
+### Sprint 13-14: RFP & Past Performance (Phase 4-5)
 - [ ] RFP document upload + AI extraction
 - [ ] Compliance matrix generator
 - [ ] Amendment diff tracker
@@ -3539,7 +4641,7 @@ ai-deal-manager/
 - [ ] Frontend: RFP workspace with compliance matrix
 - [ ] Frontend: Past performance library
 
-### Sprint 13: Multimodal Knowledge Vault
+### Sprint 15: Multimodal Knowledge Vault
 - [ ] KnowledgeVault + KnowledgeChunk models
 - [ ] Upload pipeline: PDF/DOCX/images/presentations → chunk → embed
 - [ ] Text embedding pipeline (OpenAI/Anthropic embeddings → pgvector)
@@ -3549,7 +4651,7 @@ ai-deal-manager/
 - [ ] Frontend: Knowledge Vault management (upload, browse, tag, search)
 - [ ] Seed vault with solutioning frameworks library (TOGAF, C4, arc42, etc.)
 
-### Sprint 14-16: Fully Autonomous AI Solutions Architect + Proposal Studio (Phase 6)
+### Sprint 16-18: Fully Autonomous AI Solutions Architect + Proposal Studio (Phase 6)
 - [ ] Solution Architect Agent: requirement deep-dive analysis
 - [ ] Solution Architect Agent: multimodal knowledge retrieval (RAG)
 - [ ] Solution Architect Agent: framework selection (C4, TOGAF, arc42, etc.)
@@ -3568,8 +4670,19 @@ ai-deal-manager/
 - [ ] Frontend: Solution Architect workspace (view generated architectures)
 - [ ] Frontend: Review interface with AI coaching + comments
 - [ ] DOCX export with embedded diagrams + professional formatting
+- [ ] Management Volume Engine: management approach generation (PM methodology, governance)
+- [ ] Management Volume Engine: org chart generation (Mermaid/D2 with prime/sub/govt interfaces)
+- [ ] Management Volume Engine: staffing plan timeline visualization
+- [ ] Management Volume Engine: WBS chart generation + WBS dictionary
+- [ ] Management Volume Engine: transition-in/out plan generation
+- [ ] Management Volume Engine: quality assurance plan generation
+- [ ] Management Volume Engine: risk management plan + risk matrix diagram
+- [ ] Management Volume Engine: IMS/Gantt schedule with critical path
+- [ ] Management Volume Engine: RACI matrix generation
+- [ ] Management Volume Engine: 10+ management graphics (same quality as SA technical diagrams)
+- [ ] Frontend: Management volume workspace (org chart editor, staffing visualizer)
 
-### Sprint 17-18: Intelligent Pricing Engine (Phase 7)
+### Sprint 19-20: Intelligent Pricing Engine (Phase 7)
 - [ ] RateCard + ConsultantProfile models (with market benchmarks)
 - [ ] LOE Estimation Engine: WBS derivation from SA solution
 - [ ] LOE Estimation Engine: analogous/parametric/three-point estimation
@@ -3589,18 +4702,23 @@ ai-deal-manager/
 - [ ] Frontend: Staffing plan visualization (by month, by person)
 - [ ] Frontend: Sensitivity analysis interactive charts
 
-### Sprint 19: Contract Management (Phase 8 — now powered by Legal Agent)
+### Sprint 21: Contract Management (Phase 8 — now powered by Legal Agent)
 - [ ] Contract templates + clause library
 - [ ] Contract risk scanner
 - [ ] Contract drafting from deal specifics
 - [ ] Redline tracking with version history
 - [ ] Frontend: Contract workspace
 
-### Sprint 20-21: AI Orchestration & Learning (Phase 9-10)
-- [ ] LangGraph multi-agent orchestration (17 agents)
-- [ ] MCP tool servers (all integrations — 14 servers)
-- [ ] A2A event system (45+ events)
-- [ ] Communications agent (email, Q&A)
+### Sprint 22-23: AI Orchestration & Learning (Phase 9-10)
+- [ ] LangGraph multi-agent orchestration (19 agents)
+- [ ] MCP tool servers (all integrations — 17 servers)
+- [ ] A2A event system (65+ events)
+- [ ] Communications agent (email drafting, engagement timeline)
+- [ ] Q&A tracking system: AI-drafted vendor questions prioritized by information value
+- [ ] Q&A tracking system: answer ingestion → impact assessment
+- [ ] Q&A tracking system: answer impact mapping → Compliance Agent + Pricing Agent updates
+- [ ] Q&A tracking system: complete audit trail (question → answer → impact → action)
+- [ ] MCP tools: qa_tracking_tools.py (Q&A lifecycle, impact mapping)
 - [ ] Policy & goal settings manager
 - [ ] Learning agent (outcome tracking + policy updates + strategy evolution)
 - [ ] Learning feeds back to ALL agents (strategy, marketing, SA, pricing)
@@ -3659,17 +4777,21 @@ JWT_EXPIRATION_HOURS=24
 2. **Company AI Strategy Agent** maintains living strategy, influences every bid decision, balances portfolio
 3. **Marketing & Sales Expert Agent** crafts winning capture strategies, generates win themes, coaches review teams, and positions every proposal to win
 4. **Deep Research Agent** produces consulting-quality intelligence reports (with PDF/CSV/DOCX deliverables) on agencies, competitors, markets, and technologies — feeds every other agent
-5. **End-to-end pipeline** from opportunity → research → strategy → capture → proposal → pricing → submission → contract
+5. **End-to-end pipeline** from opportunity → research → strategy → teaming → capture → security → proposal → pricing → legal review → submission → contract
 6. **Fully Autonomous AI Solutions Architect** produces complete technical solutions with 14+ architecture diagrams from your multimodal knowledge vault
 7. **Intelligent Pricing Agent** maximizes profit while keeping prices unbeatable — derives LOE from solution, uses game-theoretic optimization, runs Monte Carlo sensitivity analysis, generates Volume IV
 8. **Multimodal Knowledge Vault** stores and retrieves your reference architectures, images, diagrams, documents, patterns, and best practices via RAG
 9. **AI generates** compliance matrices, proposal sections, pricing scenarios, contracts — all grounded in YOUR knowledge base
 10. **Business Legal Agent** provides FAR/DFARS compliance, clause-by-clause contract review, OCI assessment, bid protest strategy, and legal sign-off at every pipeline stage — with DeepEval-inspired quality grading
-11. **HITL gates** enforce human approval at all critical decisions
-12. **Learning loop** improves scoring, writing, pricing, marketing, legal, AND evolves company strategy over time
-13. **Professional output** (DOCX proposals with embedded architecture diagrams, proper formatting, branding)
-14. **Full audit trail** for every action (human and AI)
-15. **RBAC** with MFA protecting sensitive operations
-16. **Docker Compose** single-command deployment with no port conflicts
-17. **Real-time** collaboration and notifications via WebSocket
-18. **17 specialized AI agents** orchestrated via LangGraph + MCP + A2A with 45+ inter-agent events
+11. **Teaming & Subcontractor Agent** identifies, evaluates, and recommends optimal teaming partners — handles SB compliance, work share optimization, OCI checks, NDA/LOI/teaming agreement generation, and risk assessment
+12. **Security & Compliance Mapping Agent** performs control-by-control mapping (NIST 800-53, 800-171, FedRAMP, CMMC, HIPAA/HITRUST), drafts SSP narratives, generates ATO approach docs, validates all security claims against solution architecture
+13. **Management Volume Engine** produces Volume II (management approach) with the same depth as the SA's Volume I — org charts, staffing timelines, transition plans, WBS, IMS, QA plans, risk matrices — all generated as professional diagrams
+14. **Q&A & Clarification Tracking** system drafts prioritized vendor questions, tracks CO answers, maps answer impacts back to compliance matrix and pricing assumptions with full audit trail
+15. **HITL gates** enforce human approval at all critical decisions
+16. **Learning loop** improves scoring, writing, pricing, marketing, legal, AND evolves company strategy over time
+17. **Professional output** (DOCX proposals with embedded architecture diagrams, proper formatting, branding)
+18. **Full audit trail** for every action (human and AI)
+19. **RBAC** with MFA protecting sensitive operations
+20. **Docker Compose** single-command deployment with no port conflicts
+21. **Real-time** collaboration and notifications via WebSocket
+22. **19 specialized AI agents** orchestrated via LangGraph + MCP + A2A with 65+ inter-agent events across 23 sprints
