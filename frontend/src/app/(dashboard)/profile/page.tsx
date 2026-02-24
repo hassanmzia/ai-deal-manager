@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import api from '@/lib/api';
 
 interface UserData {
   id: string;
@@ -60,24 +61,22 @@ export default function ProfilePage() {
 
   const fetchUserProfile = async () => {
     try {
-      const response = await fetch('/api/auth/profile/');
-      if (response.ok) {
-        const data = await response.json();
-        setProfile(data);
-        setFormData({
-          first_name: data.user.first_name,
-          last_name: data.user.last_name,
-          email: data.user.email,
-        });
-        setProfileData({
-          title: data.title || '',
-          department: data.department || '',
-          phone: data.phone || '',
-          bio: data.bio || '',
-        });
-        if (data.avatar) {
-          setAvatarPreview(data.avatar);
-        }
+      const response = await api.get('/auth/profile/');
+      const data = response.data;
+      setProfile(data);
+      setFormData({
+        first_name: data.user.first_name,
+        last_name: data.user.last_name,
+        email: data.user.email,
+      });
+      setProfileData({
+        title: data.title || '',
+        department: data.department || '',
+        phone: data.phone || '',
+        bio: data.bio || '',
+      });
+      if (data.avatar) {
+        setAvatarPreview(data.avatar);
       }
     } catch (error) {
       console.error('Failed to fetch profile:', error);
@@ -95,19 +94,10 @@ export default function ProfilePage() {
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/auth/profile/', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profileData),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setProfile(data);
-        setEditing(false);
-        showAlert('success', 'Profile updated successfully!');
-      } else {
-        showAlert('error', 'Failed to update profile');
-      }
+      const response = await api.patch('/auth/profile/', profileData);
+      setProfile(response.data);
+      setEditing(false);
+      showAlert('success', 'Profile updated successfully!');
     } catch (error) {
       console.error('Failed to update profile:', error);
       showAlert('error', 'Failed to update profile');
@@ -122,29 +112,21 @@ export default function ProfilePage() {
     }
 
     try {
-      const response = await fetch('/api/auth/change-password/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          old_password: passwords.old_password,
-          new_password: passwords.new_password,
-        }),
+      await api.post('/auth/change-password/', {
+        old_password: passwords.old_password,
+        new_password: passwords.new_password,
       });
-
-      if (response.ok) {
-        setPasswords({
-          old_password: '',
-          new_password: '',
-          new_password_confirm: '',
-        });
-        setShowPasswordForm(false);
-        showAlert('success', 'Password changed successfully!');
-      } else {
-        showAlert('error', 'Failed to change password. Please check your current password.');
-      }
-    } catch (error) {
+      setPasswords({
+        old_password: '',
+        new_password: '',
+        new_password_confirm: '',
+      });
+      setShowPasswordForm(false);
+      showAlert('success', 'Password changed successfully!');
+    } catch (error: any) {
       console.error('Failed to change password:', error);
-      showAlert('error', 'Failed to change password');
+      const errorMessage = error.response?.data?.detail || 'Failed to change password';
+      showAlert('error', errorMessage);
     }
   };
 
@@ -170,18 +152,11 @@ export default function ProfilePage() {
     formData.append('avatar', file);
 
     try {
-      const response = await fetch('/api/auth/profile/', {
-        method: 'PATCH',
-        body: formData,
+      const response = await api.patch('/auth/profile/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setProfile(data);
-        showAlert('success', 'Profile picture uploaded successfully!');
-      } else {
-        showAlert('error', 'Failed to upload profile picture');
-      }
+      setProfile(response.data);
+      showAlert('success', 'Profile picture uploaded successfully!');
     } catch (error) {
       console.error('Failed to upload avatar:', error);
       showAlert('error', 'Failed to upload profile picture');
@@ -191,32 +166,25 @@ export default function ProfilePage() {
   const handleMFAToggle = async () => {
     try {
       const endpoint = profile?.user.is_mfa_enabled
-        ? '/api/auth/mfa/disable/'
-        : '/api/auth/mfa/setup/';
+        ? '/auth/mfa/disable/'
+        : '/auth/mfa/setup/';
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (profile) {
-          setProfile({
-            ...profile,
-            user: {
-              ...profile.user,
-              is_mfa_enabled: !profile.user.is_mfa_enabled,
-            },
-          });
-        }
-        showAlert('success', `MFA ${profile?.user.is_mfa_enabled ? 'disabled' : 'setup initiated'}`);
-        setShowMFASetup(false);
-      } else {
-        showAlert('error', 'Failed to update MFA settings');
+      await api.post(endpoint);
+      if (profile) {
+        setProfile({
+          ...profile,
+          user: {
+            ...profile.user,
+            is_mfa_enabled: !profile.user.is_mfa_enabled,
+          },
+        });
       }
-    } catch (error) {
+      showAlert('success', `MFA ${profile?.user.is_mfa_enabled ? 'disabled' : 'setup initiated'}`);
+      setShowMFASetup(false);
+    } catch (error: any) {
       console.error('Failed to update MFA:', error);
-      showAlert('error', 'MFA endpoint not yet implemented');
+      const errorMessage = error.response?.data?.detail || 'Failed to update MFA settings';
+      showAlert('error', errorMessage);
     }
   };
 
@@ -256,7 +224,7 @@ export default function ProfilePage() {
               <img src={avatarPreview} alt="Profile" className="w-full h-full object-cover" />
             ) : (
               <div className="text-center">
-                <div className="text-3xl">
+                <div className="text-3xl font-bold">
                   {user.first_name.charAt(0).toUpperCase()}
                   {user.last_name.charAt(0).toUpperCase()}
                 </div>
