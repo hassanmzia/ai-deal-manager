@@ -194,7 +194,7 @@ export default function AdminUsersPage() {
         if (formData.password) {
           payload.password = formData.password;
         }
-        const updated = await updateUser(selectedUser!.id as number, payload);
+        const updated = await updateUser(selectedUser!.id, payload);
         setUsers(users.map((u) => (u.id === updated.id ? updated : u)));
         handleCloseModal();
       } catch (err: any) {

@@ -30,11 +30,11 @@ export async function createUser(userData: {
   return response.data;
 }
 
-export async function updateUser(id: number, userData: Partial<User>): Promise<User> {
+export async function updateUser(id: string | number, userData: Partial<User>): Promise<User> {
   const response = await api.patch(`/auth/users/${id}/`, userData);
   return response.data;
 }
 
-export async function deleteUser(id: number): Promise<void> {
+export async function deleteUser(id: string | number): Promise<void> {
   await api.delete(`/auth/users/${id}/`);
 }
