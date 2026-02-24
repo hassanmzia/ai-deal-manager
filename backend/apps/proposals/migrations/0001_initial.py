@@ -1,5 +1,4 @@
 # Generated migration for proposals app
-
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
@@ -12,8 +11,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('deals', '0001_initial'),
-        ('accounts', '0001_initial'),
-        ('core', '0001_initial'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
@@ -23,13 +21,13 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('name', models.CharField(max_length=300)),
+                ('name', models.CharField(max_length=200)),
                 ('description', models.TextField(blank=True)),
-                ('structure', models.JSONField(default=list)),
-                ('is_active', models.BooleanField(default=True)),
+                ('volumes', models.JSONField(default=list)),
+                ('is_default', models.BooleanField(default=False)),
             ],
             options={
-                'ordering': ['name'],
+                'ordering': ['-created_at'],
             },
         ),
         migrations.CreateModel(
@@ -40,21 +38,41 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('title', models.CharField(max_length=500)),
                 ('version', models.IntegerField(default=1)),
-                ('status', models.CharField(choices=[('draft', 'Draft'), ('in_review', 'In Review'), ('approved', 'Approved'), ('submitted', 'Submitted'), ('awarded', 'Awarded'), ('lost', 'Lost')], default='draft', max_length=20)),
-                ('submission_deadline', models.DateTimeField(blank=True, null=True)),
-                ('submitted_at', models.DateTimeField(blank=True, null=True)),
-                ('compliance_review_done', models.BooleanField(default=False)),
-                ('red_team_done', models.BooleanField(default=False)),
+                ('status', models.CharField(choices=[('draft', 'Draft'), ('pink_team', 'Pink Team Review'), ('red_team', 'Red Team Review'), ('gold_team', 'Gold Team Review'), ('final', 'Final'), ('submitted', 'Submitted')], default='draft', max_length=30)),
+                ('win_themes', models.JSONField(default=list)),
+                ('discriminators', models.JSONField(default=list)),
                 ('executive_summary', models.TextField(blank=True)),
-                ('key_messages', models.JSONField(default=list)),
-                ('draft_document', models.FileField(blank=True, upload_to='proposals/')),
-                ('final_document', models.FileField(blank=True, upload_to='proposals/')),
-                ('assigned_to', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='assigned_proposals', to=settings.AUTH_USER_MODEL)),
+                ('total_requirements', models.IntegerField(default=0)),
+                ('compliant_count', models.IntegerField(default=0)),
+                ('compliance_percentage', models.FloatField(default=0.0)),
                 ('deal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='proposals', to='deals.deal')),
                 ('template', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='proposals.proposaltemplate')),
             ],
             options={
-                'ordering': ['-created_at'],
+                'ordering': ['-version'],
+            },
+        ),
+        migrations.CreateModel(
+            name='ProposalSection',
+            fields=[
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('volume', models.CharField(max_length=100)),
+                ('section_number', models.CharField(max_length=50)),
+                ('title', models.CharField(max_length=300)),
+                ('order', models.IntegerField(default=0)),
+                ('ai_draft', models.TextField(blank=True)),
+                ('human_content', models.TextField(blank=True)),
+                ('final_content', models.TextField(blank=True)),
+                ('status', models.CharField(choices=[('not_started', 'Not Started'), ('ai_drafted', 'AI Drafted'), ('in_review', 'In Review'), ('revised', 'Revised'), ('approved', 'Approved')], default='not_started', max_length=20)),
+                ('word_count', models.IntegerField(default=0)),
+                ('page_limit', models.IntegerField(blank=True, null=True)),
+                ('assigned_to', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
+                ('proposal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sections', to='proposals.proposal')),
+            ],
+            options={
+                'ordering': ['volume', 'order'],
             },
         ),
         migrations.CreateModel(
@@ -63,12 +81,14 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('cycle_type', models.CharField(choices=[('red_team', 'Red Team'), ('compliance', 'Compliance'), ('executive', 'Executive'), ('customer_final', 'Customer Final')], max_length=20)),
+                ('review_type', models.CharField(choices=[('pink', 'Pink Team'), ('red', 'Red Team'), ('gold', 'Gold Team')], max_length=20)),
                 ('status', models.CharField(choices=[('scheduled', 'Scheduled'), ('in_progress', 'In Progress'), ('completed', 'Completed')], default='scheduled', max_length=20)),
                 ('scheduled_date', models.DateTimeField(blank=True, null=True)),
-                ('completion_date', models.DateTimeField(blank=True, null=True)),
-                ('feedback_summary', models.TextField(blank=True)),
-                ('proposal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='review_cycles', to='proposals.proposal')),
+                ('completed_date', models.DateTimeField(blank=True, null=True)),
+                ('overall_score', models.FloatField(blank=True, null=True)),
+                ('summary', models.TextField(blank=True)),
+                ('proposal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to='proposals.proposal')),
+                ('reviewers', models.ManyToManyField(blank=True, to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'ordering': ['-created_at'],
@@ -80,32 +100,15 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('page_number', models.IntegerField(blank=True, null=True)),
-                ('section', models.CharField(blank=True, max_length=255)),
-                ('comment_text', models.TextField()),
-                ('severity', models.CharField(choices=[('minor', 'Minor'), ('major', 'Major'), ('critical', 'Critical')], default='minor', max_length=20)),
-                ('status', models.CharField(choices=[('open', 'Open'), ('resolved', 'Resolved'), ('deferred', 'Deferred')], default='open', max_length=20)),
-                ('resolution_notes', models.TextField(blank=True)),
-                ('reviewer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='proposal_comments', to=settings.AUTH_USER_MODEL)),
-                ('review_cycle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='comments', to='proposals.reviewcycle')),
+                ('comment_type', models.CharField(choices=[('strength', 'Strength'), ('weakness', 'Weakness'), ('suggestion', 'Suggestion'), ('must_fix', 'Must Fix')], max_length=20)),
+                ('content', models.TextField()),
+                ('is_resolved', models.BooleanField(default=False)),
+                ('review', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='comments', to='proposals.reviewcycle')),
+                ('reviewer', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
+                ('section', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='review_comments', to='proposals.proposalsection')),
             ],
             options={
                 'ordering': ['-created_at'],
-            },
-        ),
-        migrations.CreateModel(
-            name='ProposalSection',
-            fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('section_name', models.CharField(max_length=255)),
-                ('section_number', models.CharField(blank=True, max_length=50)),
-                ('owner', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='proposal_sections', to=settings.AUTH_USER_MODEL)),
-                ('proposal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sections', to='proposals.proposal')),
-            ],
-            options={
-                'ordering': ['section_number'],
             },
         ),
     ]

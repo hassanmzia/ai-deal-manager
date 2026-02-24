@@ -1,5 +1,4 @@
 # Generated migration for past_performance app
-
 from django.db import migrations, models
 import django.db.models.deletion
 import pgvector.django
@@ -11,7 +10,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('core', '0001_initial'),
         ('opportunities', '0001_initial'),
     ]
 

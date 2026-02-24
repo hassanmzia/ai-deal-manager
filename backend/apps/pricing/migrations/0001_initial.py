@@ -1,5 +1,4 @@
 # Generated migration for pricing app
-
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
@@ -12,8 +11,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('deals', '0001_initial'),
-        ('accounts', '0001_initial'),
-        ('core', '0001_initial'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
@@ -65,6 +63,65 @@ class Migration(migrations.Migration):
             ],
             options={
                 'ordering': ['name'],
+            },
+        ),
+        migrations.CreateModel(
+            name='PricingScenario',
+            fields=[
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('name', models.CharField(max_length=200)),
+                ('strategy_type', models.CharField(choices=[('max_profit', 'Maximum Profit'), ('value_based', 'Value-Based'), ('competitive', 'Competitive'), ('aggressive', 'Aggressive'), ('incumbent_match', 'Incumbent Match'), ('budget_fit', 'Budget Fit'), ('floor', 'Floor')], max_length=50)),
+                ('total_price', models.DecimalField(decimal_places=2, max_digits=15)),
+                ('profit', models.DecimalField(decimal_places=2, max_digits=15)),
+                ('margin_pct', models.FloatField()),
+                ('probability_of_win', models.FloatField(default=0.0)),
+                ('expected_value', models.DecimalField(decimal_places=2, default=0, max_digits=15)),
+                ('competitive_position', models.CharField(blank=True, max_length=50)),
+                ('sensitivity_data', models.JSONField(default=dict)),
+                ('is_recommended', models.BooleanField(default=False)),
+                ('rationale', models.TextField(blank=True)),
+            ],
+            options={
+                'ordering': ['-expected_value'],
+            },
+        ),
+        migrations.CreateModel(
+            name='PricingIntelligence',
+            fields=[
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('source', models.CharField(max_length=100)),
+                ('labor_category', models.CharField(blank=True, max_length=255)),
+                ('agency', models.CharField(blank=True, max_length=255)),
+                ('rate_low', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)),
+                ('rate_median', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)),
+                ('rate_high', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True)),
+                ('data_date', models.DateField(blank=True, null=True)),
+                ('raw_data', models.JSONField(default=dict)),
+            ],
+            options={
+                'ordering': ['-data_date'],
+            },
+        ),
+        migrations.CreateModel(
+            name='PricingApproval',
+            fields=[
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('status', models.CharField(choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected')], default='pending', max_length=20)),
+                ('notes', models.TextField(blank=True)),
+                ('decided_at', models.DateTimeField(blank=True, null=True)),
+                ('approved_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='pricing_approvals', to=settings.AUTH_USER_MODEL)),
+                ('deal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='pricing_approvals', to='deals.deal')),
+                ('requested_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='pricing_requests', to=settings.AUTH_USER_MODEL)),
+                ('scenario', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='pricing.pricingscenario')),
+            ],
+            options={
+                'ordering': ['-created_at'],
             },
         ),
         migrations.CreateModel(
@@ -120,49 +177,14 @@ class Migration(migrations.Migration):
                 'ordering': ['-version'],
             },
         ),
-        migrations.CreateModel(
-            name='PricingScenario',
-            fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('name', models.CharField(max_length=200)),
-                ('strategy_type', models.CharField(choices=[('max_profit', 'Maximum Profit'), ('value_based', 'Value-Based'), ('competitive', 'Competitive'), ('aggressive', 'Aggressive'), ('incumbent_match', 'Incumbent Match'), ('budget_fit', 'Budget Fit'), ('floor', 'Floor')], max_length=50)),
-                ('total_price', models.DecimalField(decimal_places=2, max_digits=15)),
-                ('profit', models.DecimalField(decimal_places=2, max_digits=15)),
-                ('margin_pct', models.FloatField()),
-                ('assumed_p_win', models.FloatField(default=0.5)),
-                ('expected_value', models.DecimalField(decimal_places=2, max_digits=15, null=True)),
-                ('rationale', models.TextField(blank=True)),
-                ('risk_factors', models.JSONField(default=list)),
-                ('cost_model', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='pricing.costmodel')),
-                ('deal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='pricing_scenarios', to='deals.deal')),
-            ],
-            options={
-                'ordering': ['-created_at'],
-            },
+        migrations.AddField(
+            model_name='pricingscenario',
+            name='cost_model',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='pricing.costmodel'),
         ),
-        migrations.CreateModel(
-            name='PricingIntelligence',
-            fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('opportunity', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='opportunities.opportunity', related_name='pricing_intel')),
-                ('deal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='pricing_intel', to='deals.deal')),
-            ],
-        ),
-        migrations.CreateModel(
-            name='PricingApproval',
-            fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('status', models.CharField(choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected')], default='pending', max_length=20)),
-                ('rationale', models.TextField(blank=True)),
-                ('pricing_scenario', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='pricing.pricingscenario')),
-                ('approved_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='approved_pricing', to=settings.AUTH_USER_MODEL)),
-                ('requested_by', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='requested_pricing_approvals', to=settings.AUTH_USER_MODEL)),
-            ],
+        migrations.AddField(
+            model_name='pricingscenario',
+            name='deal',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='pricing_scenarios', to='deals.deal'),
         ),
     ]
