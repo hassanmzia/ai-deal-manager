@@ -139,35 +139,56 @@ def check_for_amendments(self):
 
     for document in active_documents:
         try:
-            # Placeholder: In production this would call the SAM.gov API
-            # or a cached amendment feed. For now we log and skip.
-            #
-            # sam_amendments = sam_gov_client.get_amendments(
-            #     solicitation_number=document.deal.solicitation_number
-            # )
-            # for sam_amend in sam_amendments:
-            #     if not Amendment.objects.filter(
-            #         rfp_document=document,
-            #         amendment_number=sam_amend["number"],
-            #     ).exists():
-            #         changes = tracker.compute_diff(
-            #             document.extracted_text,
-            #             sam_amend["text"],
-            #         )
-            #         is_material = tracker.assess_materiality(changes)
-            #         Amendment.objects.create(
-            #             rfp_document=document,
-            #             amendment_number=sam_amend["number"],
-            #             title=sam_amend.get("title", ""),
-            #             summary=sam_amend.get("summary", ""),
-            #             changes=changes,
-            #             is_material=is_material,
-            #             requires_compliance_update=is_material,
-            #         )
+            # Resolve the SAM.gov notice_id via deal -> opportunity
+            opportunity = getattr(document.deal, "opportunity", None)
+            if not opportunity or not opportunity.notice_id:
+                logger.debug(
+                    "Document %s has no linked SAM.gov opportunity. Skipping.",
+                    document.id,
+                )
+                continue
+
+            notice_id = opportunity.notice_id
+
+            # Call SAM.gov to get related notices (amendments)
+            from apps.opportunities.services.samgov_client import SAMGovClient
+
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            client = SAMGovClient()
+            try:
+                sam_amendments = loop.run_until_complete(
+                    client.check_amendments(notice_id)
+                )
+            finally:
+                loop.run_until_complete(client.close())
+                loop.close()
+
+            for i, sam_amend in enumerate(sam_amendments, 1):
+                if not Amendment.objects.filter(
+                    rfp_document=document,
+                    amendment_number=i,
+                ).exists():
+                    changes = tracker.compute_diff(
+                        document.extracted_text or "",
+                        sam_amend.get("description", "") or sam_amend.get("body", ""),
+                    )
+                    is_material = tracker.assess_materiality(changes)
+                    Amendment.objects.create(
+                        rfp_document=document,
+                        amendment_number=i,
+                        title=sam_amend.get("title", ""),
+                        summary=sam_amend.get("description", ""),
+                        changes=changes,
+                        is_material=is_material,
+                        requires_compliance_update=is_material,
+                    )
+
             logger.debug(
-                "Amendment check for document %s (deal %s): no new amendments.",
+                "Amendment check for document %s (deal %s): %d related notices found.",
                 document.id,
                 document.deal_id,
+                len(sam_amendments),
             )
         except Exception:
             logger.exception(

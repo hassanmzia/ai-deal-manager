@@ -65,7 +65,8 @@ class OpportunityViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=["post"])
     def trigger_scan(self, request):
         """Trigger an async SAM.gov scan."""
-        # In production this would call: scan_samgov_opportunities.delay()
+        from .tasks import scan_samgov_opportunities
+        scan_samgov_opportunities.delay()
         return Response(
             {"message": "SAM.gov scan queued. Results will appear shortly."},
             status=status.HTTP_202_ACCEPTED,
