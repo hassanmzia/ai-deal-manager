@@ -355,7 +355,7 @@ export default function SolutionsPage() {
   const loadDeals = useCallback(async () => {
     setDealsLoading(true);
     try {
-      const data = await getDeals({ ordering: "-updated_at", page_size: 100 });
+      const data = await getDeals({ ordering: "-updated_at", page_size: "100" });
       const active = (data.results ?? []).filter(
         (d: Deal) => !["closed_won", "closed_lost", "no_bid"].includes(d.stage)
       );
