@@ -11,6 +11,12 @@ from src.agents.rfp_analyst_agent import RFPAnalystAgent
 from src.agents.past_performance_agent import PastPerformanceAgent
 from src.agents.proposal_writer_agent import ProposalWriterAgent
 from src.agents.deal_pipeline_agent import DealPipelineAgent
+from src.agents.compliance_agent import ComplianceAgent
+from src.agents.qa_agent import QAAgent
+from src.agents.submission_agent import SubmissionAgent
+from src.agents.contract_agent import ContractAgent
+from src.agents.communication_agent import CommunicationAgent
+from src.agents.learning_agent import LearningAgent
 
 __all__ = [
     "StrategyAgent",
@@ -26,4 +32,10 @@ __all__ = [
     "PastPerformanceAgent",
     "ProposalWriterAgent",
     "DealPipelineAgent",
+    "ComplianceAgent",
+    "QAAgent",
+    "SubmissionAgent",
+    "ContractAgent",
+    "CommunicationAgent",
+    "LearningAgent",
 ]
