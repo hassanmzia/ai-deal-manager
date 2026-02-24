@@ -21,31 +21,31 @@ interface Notification {
   timestamp: Date;
 }
 
-const SAMPLE_NOTIFICATIONS: Notification[] = [
-  {
-    id: 1,
-    message: 'Deal "Enterprise Software License" moved to Won',
-    type: 'success',
-    timestamp: new Date(Date.now() - 3600000),
-  },
-  {
-    id: 2,
-    message: 'New RFP received from Acme Corp',
-    type: 'info',
-    timestamp: new Date(Date.now() - 7200000),
-  },
-  {
-    id: 3,
-    message: 'Proposal review deadline tomorrow',
-    type: 'warning',
-    timestamp: new Date(Date.now() - 86400000),
-  },
-];
-
 export function Topbar() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const [notifications, setNotifications] = useState<Notification[]>(SAMPLE_NOTIFICATIONS);
+  // Lazy initializer: runs only on the client, avoiding SSR/hydration timestamp mismatch.
+  // Module-level Date.now() calls differ between server and client render times.
+  const [notifications, setNotifications] = useState<Notification[]>(() => [
+    {
+      id: 1,
+      message: 'Deal "Enterprise Software License" moved to Won',
+      type: 'success',
+      timestamp: new Date(Date.now() - 3600000),
+    },
+    {
+      id: 2,
+      message: 'New RFP received from Acme Corp',
+      type: 'info',
+      timestamp: new Date(Date.now() - 7200000),
+    },
+    {
+      id: 3,
+      message: 'Proposal review deadline tomorrow',
+      type: 'warning',
+      timestamp: new Date(Date.now() - 86400000),
+    },
+  ]);
 
   const displayName = user
     ? `${user.first_name || user.username} ${user.last_name || ""}`.trim()
