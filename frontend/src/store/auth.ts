@@ -33,22 +33,27 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  tokens:
-    typeof window !== "undefined"
-      ? (() => {
-          try {
-            const raw = localStorage.getItem("auth-tokens");
-            return raw ? JSON.parse(raw) : null;
-          } catch {
-            return null;
-          }
-        })()
-      : null,
+  // Always null on init — reading localStorage here causes SSR/hydration mismatch
+  // because the server has no localStorage and renders different HTML than the client.
+  // Tokens are loaded lazily in initialize(), called from a useEffect (client-only).
+  tokens: null,
   isAuthenticated: false,
 
   initialize: async () => {
-    const { tokens, user } = get();
-    if (!tokens?.access || user) return; // already loaded or no token
+    let { tokens, user } = get();
+
+    // On first client-side call: read tokens from localStorage
+    if (!tokens) {
+      try {
+        const raw = localStorage.getItem("auth-tokens");
+        tokens = raw ? JSON.parse(raw) : null;
+        if (tokens) set({ tokens });
+      } catch {
+        // Malformed JSON in localStorage — ignore
+      }
+    }
+
+    if (!tokens?.access || user) return;
     try {
       const userResponse = await api.get("/auth/me/");
       set({ user: userResponse.data, isAuthenticated: true });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -14,14 +14,26 @@ export default function DashboardLayout({
   const router = useRouter();
   const tokens = useAuthStore((state) => state.tokens);
   const initialize = useAuthStore((state) => state.initialize);
+  // Track whether we've completed the client-side auth check.
+  // This prevents rendering different trees on server vs client (hydration errors).
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!tokens?.access) {
+    // initialize() reads localStorage and fetches /auth/me/ — client-side only
+    initialize().finally(() => setMounted(true));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (mounted && !tokens?.access) {
       router.push("/login");
-    } else {
-      initialize();
     }
-  }, [tokens, router, initialize]);
+  }, [mounted, tokens, router]);
+
+  // Render nothing until the client-side auth check completes.
+  // Both server and first client render return null → no mismatch.
+  if (!mounted) {
+    return null;
+  }
 
   if (!tokens?.access) {
     return null;
