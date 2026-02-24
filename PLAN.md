@@ -19,6 +19,7 @@
 6A. [Phase 4A — Company AI Strategy Agent](#6a-phase-4a--company-ai-strategy-agent)
 6B. [Phase 4B — Marketing & Sales Expert Agent](#6b-phase-4b--marketing--sales-expert-agent) **(NEW)**
 6C. [Phase 4C — Deep Research Agent](#6c-phase-4c--deep-research-agent) **(NEW)**
+6D. [Phase 4D — Business Legal Agent](#6d-phase-4d--business-legal-agent) **(NEW)**
 7. [Phase 5 — Past Performance Vault](#7-phase-5--past-performance-vault)
 8. [Phase 6 — Proposal Authoring Studio](#8-phase-6--proposal-authoring-studio) (includes **Fully Autonomous AI Solutions Architect** + **Multimodal Knowledge Vault**)
 9. [Phase 7 — Intelligent Pricing & Staffing Engine](#9-phase-7--intelligent-pricing--staffing-engine) **(MAJOR UPGRADE)**
@@ -1353,6 +1354,398 @@ research_graph.add_edge("quality_check", END)
 
 ---
 
+## 6D. Phase 4D — Business Legal Agent
+
+> **Purpose:** A fully autonomous business legal expert agent, inspired by [AI-Legal-Assistant](https://github.com/hassanmzia/AI-Legal-Assistant), customized for federal government contracting. It guides the entire bidding process from a legal perspective, reviews and drafts contracts, ensures FAR/DFARS compliance, identifies legal risks in proposals and teaming arrangements, and protects the company from legal exposure at every stage of the deal pipeline.
+
+### 6D.1 Legal Knowledge Base (RAG-Powered)
+
+```python
+class LegalKnowledgeBase(models.Model):
+    """
+    Legal knowledge base for the Business Legal Agent.
+    Seeded with federal acquisition law, contract law, and business law
+    — then continuously updated with case outcomes and new regulations.
+    """
+    title = models.CharField(max_length=500)
+    category = models.CharField(choices=[
+        # Federal Acquisition
+        ('far', 'Federal Acquisition Regulation (FAR)'),
+        ('dfars', 'Defense FAR Supplement (DFARS)'),
+        ('gsam', 'GSA Acquisition Manual (GSAM)'),
+        ('agar', 'Agency-Specific Acquisition Regulation'),
+        ('executive_order', 'Executive Order'),
+
+        # Contract Law
+        ('contract_precedent', 'Contract Law Precedent'),
+        ('gao_decision', 'GAO Bid Protest Decision'),
+        ('cofc_decision', 'Court of Federal Claims Decision'),
+        ('bca_decision', 'Board of Contract Appeals Decision'),
+
+        # Compliance & Regulatory
+        ('far_clause', 'FAR Clause Library'),
+        ('dfars_clause', 'DFARS Clause Library'),
+        ('compliance_guide', 'Compliance Guide'),
+        ('ethics_regulation', 'Ethics & OCI Regulation'),
+
+        # Business Law
+        ('teaming_agreement', 'Teaming Agreement Template/Precedent'),
+        ('nda_template', 'NDA Template/Precedent'),
+        ('subcontract_template', 'Subcontract Template/Precedent'),
+        ('ip_agreement', 'IP/Data Rights Agreement'),
+        ('employment_law', 'Employment Law (for staffing)'),
+
+        # Risk & Insurance
+        ('insurance_requirement', 'Insurance Requirement'),
+        ('bonding_requirement', 'Bonding Requirement'),
+        ('liability_precedent', 'Liability Precedent'),
+
+        # Other
+        ('internal_policy', 'Company Legal Policy'),
+        ('other', 'Other Legal Document'),
+    ])
+
+    content = models.TextField()
+    source = models.CharField(max_length=500, blank=True)   # "FAR 52.232-1", "GAO B-420123"
+    effective_date = models.DateField(null=True)
+    jurisdiction = models.CharField(max_length=100, blank=True)
+    tags = models.JSONField(default=list)
+
+    # Vector embedding for RAG
+    embedding = VectorField(dimensions=1536)
+
+class LegalClauseLibrary(models.Model):
+    """
+    Comprehensive clause library for contract drafting and review.
+    Each clause has standard text, risk analysis, and negotiation guidance.
+    """
+    clause_number = models.CharField(max_length=50)          # "FAR 52.212-4"
+    title = models.CharField(max_length=255)
+    regulation_source = models.CharField(max_length=50)      # FAR, DFARS, GSAM
+    full_text = models.TextField()
+
+    # Legal analysis
+    risk_level = models.CharField(choices=[
+        ('low', 'Low Risk'),
+        ('medium', 'Medium Risk'),
+        ('high', 'High Risk'),
+        ('critical', 'Critical — Requires Legal Review'),
+    ])
+    risk_explanation = models.TextField(blank=True)
+    common_issues = models.JSONField(default=list)           # Known problems with this clause
+    negotiation_guidance = models.TextField(blank=True)      # How to negotiate this clause
+    standard_response = models.TextField(blank=True)         # Pre-approved response language
+    requires_legal_review = models.BooleanField(default=False)
+
+    # Applicability
+    contract_types = models.JSONField(default=list)          # FFP, T&M, CPFF, IDIQ, etc.
+    applicable_thresholds = models.JSONField(default=dict)   # SAT, commercial item, etc.
+    mandatory = models.BooleanField(default=False)
+    flowdown_required = models.BooleanField(default=False)   # Must flow to subs
+
+    embedding = VectorField(dimensions=1536)
+```
+
+### 6D.2 Business Legal Agent Capabilities
+
+```python
+class BusinessLegalAgent:
+    """
+    Fully Autonomous Business Legal Agent.
+
+    Inspired by AI-Legal-Assistant's multi-tool ReAct architecture
+    (RAG search, loophole detection, risk assessment, contract review,
+    compliance checking, evaluation framework) — customized for
+    federal government contracting and deal pipeline.
+    """
+
+    # ── Bidding Process Legal Guidance ─────────────────────
+
+    def review_rfp_legal_terms(self, rfp_document) -> RFPLegalReview:
+        """
+        Legal review of the RFP:
+        1. Identify all FAR/DFARS clauses cited
+        2. Flag high-risk clauses (unlimited data rights, etc.)
+        3. Identify unusual or onerous terms
+        4. Check for OCI concerns
+        5. Assess protest-worthy issues
+        6. Review set-aside requirements
+        7. Identify mandatory certifications
+        8. Flag insurance/bonding requirements
+        9. Review IP/data rights provisions
+        10. Assess penalty clauses
+        """
+
+    def assess_bid_legal_risks(self, deal, rfp, proposal) -> BidLegalRiskAssessment:
+        """
+        Legal risk assessment for the entire bid:
+        - False Claims Act exposure
+        - OCI risk
+        - Key personnel commitment liability
+        - Pricing certification risk (CAS)
+        - Small business subcontracting plan compliance
+        - Buy American Act / Trade Agreements Act
+        - Section 889 (banned telecom)
+        - CMMC compliance
+        - Representation and certification accuracy
+        """
+
+    def guide_bid_no_bid_legal(self, deal) -> BidNoBidLegalGuidance:
+        """
+        Legal perspective on bid/no-bid:
+        - Eligibility check (set-aside, size standard, OCI)
+        - Certification requirements met?
+        - Unacceptable liability exposure?
+        - Protest grounds if we lose?
+        - Teaming arrangement exposure?
+        """
+
+    # ── Contract Review & Drafting ─────────────────────────
+
+    def review_contract(self, contract_text, contract_type) -> ContractReview:
+        """
+        Comprehensive contract review (clause-by-clause):
+        1. Map every clause to FAR/DFARS source
+        2. Risk-score each clause
+        3. Identify missing mandatory clauses
+        4. Liability analysis (indemnification, limitation, liquidated damages)
+        5. IP & data rights review
+        6. Termination provisions (T4C, T4D, cure/show cause)
+        7. Payment & pricing terms
+        8. Compliance requirements (CAS, TINA, SCA, BAA)
+        9. Dispute resolution (CDA, ADR)
+        """
+
+    def draft_contract(self, deal, contract_type, terms) -> ContractDraft:
+        """
+        Draft contracts with clause-by-clause justification:
+        - Prime contract terms response
+        - Teaming Agreements (with flow-down)
+        - Subcontract Agreements
+        - NDAs (mutual, one-way, gov-specific)
+        - Consultant Agreements
+        - Task Order responses
+        Includes negotiation positions (ideal, acceptable, walk-away).
+        """
+
+    def generate_redline(self, original, proposed) -> RedlineAnalysis:
+        """
+        Intelligent redline with legal impact assessment per change.
+        """
+
+    # ── Teaming & Subcontracting ───────────────────────────
+
+    def review_teaming_arrangement(self, agreement, partner) -> TeamingReview:
+        """
+        Legal review of teaming/subcontracting:
+        - Work share allocation (set-aside rules)
+        - Limitation on subcontracting (SBA)
+        - IP protection between team members
+        - Non-compete / non-solicitation
+        - Flow-down clause compliance
+        - Joint venture vs prime/sub analysis
+        """
+
+    def assess_oci_risk(self, deal, team_members) -> OCIAssessment:
+        """
+        OCI analysis: biased ground rules, unequal access,
+        impaired objectivity — with mitigation plan.
+        """
+
+    # ── FAR/DFARS Compliance ───────────────────────────────
+
+    def check_far_compliance(self, document, document_type) -> FARComplianceReport:
+        """
+        Full FAR/DFARS compliance audit:
+        Representations, CAS, TINA, Buy American, Section 889,
+        CMMC, SCA/DBA, EEO, affirmative action.
+        """
+
+    def check_ethics_compliance(self, deal, team) -> EthicsReport:
+        """
+        Procurement ethics: Procurement Integrity Act,
+        revolving door, gifts, lobbying, personal COI,
+        mandatory disclosure.
+        """
+
+    def monitor_regulatory_changes(self) -> list[RegulatoryAlert]:
+        """
+        Monitor FAR/DFARS changes via Deep Research Agent.
+        """
+
+    # ── Bid Protest & Disputes ─────────────────────────────
+
+    def assess_protest_viability(self, deal, award_decision) -> ProtestAssessment:
+        """
+        Protest viability: grounds, GAO vs COFC, timeline,
+        cost/benefit, precedent search (RAG), corrective action probability.
+        """
+
+    def draft_protest(self, deal, protest_grounds) -> ProtestDraft:
+        """
+        Draft protest with facts, legal grounds, precedent citations.
+        """
+
+    def prepare_claims(self, contract, issue_type) -> ClaimPreparation:
+        """
+        CDA claims: REA drafting, certification, documentation, interest calc.
+        """
+
+    # ── Proposal Legal Review ──────────────────────────────
+
+    def review_proposal_legal(self, proposal, rfp) -> ProposalLegalReview:
+        """
+        Final legal review before submission:
+        Representations accuracy, False Claims Act check,
+        key personnel language, pricing certifications,
+        subcontracting plan, OCI disclosure, data rights assertions.
+        """
+
+    # ── Evaluation Framework (from AI-Legal-Assistant) ─────
+
+    def evaluate_legal_analysis(self, output, analysis_type) -> LegalEvaluation:
+        """
+        Quality evaluation (DeepEval-inspired):
+        - Tool Correctness (were right legal tools used?)
+        - Task Completion (all legal aspects covered?)
+        - Answer Relevancy (analysis relevant to question?)
+        - Content Coverage (thoroughness by category)
+        - Grading: A-F scale
+        """
+```
+
+### 6D.3 Legal Analysis Types
+
+```python
+LEGAL_ANALYSIS_TYPES = {
+    "rfp_legal_review": {
+        "tools": ["legal_rag_search", "clause_library_search",
+                  "compliance_check", "risk_assessment"],
+        "required_aspects": ["FAR/DFARS clauses", "liability", "IP/data rights",
+                            "set-aside compliance", "OCI", "insurance/bonding"],
+    },
+    "contract_review": {
+        "tools": ["legal_rag_search", "clause_library_search", "contract_review",
+                  "compliance_check", "risk_assessment", "loophole_detection"],
+        "required_aspects": ["clause analysis", "liability", "IP rights",
+                            "termination", "payment", "compliance", "disputes"],
+    },
+    "teaming_review": {
+        "tools": ["legal_rag_search", "contract_review",
+                  "compliance_check", "oci_assessment"],
+        "required_aspects": ["work share", "IP protection", "exclusivity",
+                            "flow-down", "small business compliance"],
+    },
+    "bid_protest_assessment": {
+        "tools": ["legal_rag_search", "web_legal_search",
+                  "protest_precedent_search", "risk_assessment"],
+        "required_aspects": ["protest grounds", "standing", "timeliness",
+                            "precedent", "likelihood of success"],
+    },
+    "compliance_audit": {
+        "tools": ["clause_library_search", "compliance_check", "web_legal_search"],
+        "required_aspects": ["representations", "CAS", "TINA", "Buy American",
+                            "Section 889", "CMMC", "SCA/DBA", "EEO"],
+    },
+    "ethics_review": {
+        "tools": ["legal_rag_search", "compliance_check", "risk_assessment"],
+        "required_aspects": ["Procurement Integrity", "revolving door",
+                            "gifts", "lobbying", "personal COI"],
+    },
+}
+```
+
+### 6D.4 LangGraph Legal Agent (ReAct Pattern)
+
+```python
+class LegalAgentState(TypedDict):
+    messages: list                       # Conversation history (ReAct)
+    deal: dict
+    document_text: str                   # Contract/RFP/agreement text
+    analysis_type: str
+    knowledge_results: list              # RAG results from legal KB
+    clause_analysis: list                # Per-clause risk analysis
+    compliance_report: dict
+    risk_assessment: dict
+    recommendations: list
+    evaluation_scores: dict              # Quality evaluation (A-F)
+    tools_used: list
+    iteration_count: int                 # ReAct loop (max 10)
+    final_analysis: str
+
+legal_graph = StateGraph(LegalAgentState)
+
+# ReAct pattern (from AI-Legal-Assistant)
+legal_graph.add_node("agent", legal_agent_node)          # LLM reasoning
+legal_graph.add_node("tools", legal_tool_node)           # Tool execution
+legal_graph.add_node("evaluate", evaluate_legal_output)  # Quality evaluation
+
+legal_graph.set_entry_point("agent")
+legal_graph.add_conditional_edges("agent", should_continue_legal,
+    {"tools": "tools", "evaluate": "evaluate", "end": END})
+legal_graph.add_edge("tools", "agent")
+legal_graph.add_edge("evaluate", END)
+```
+
+### 6D.5 MCP Tools for Legal Agent
+
+```python
+@legal_server.tool("legal_rag_search")
+async def legal_rag_search(query: str, categories: list[str] = None):
+    """Search legal KB for FAR/DFARS, precedents, GAO decisions"""
+
+@legal_server.tool("clause_library_search")
+async def clause_search(clause_number: str = None, keywords: str = None,
+                        risk_level: str = None):
+    """Search FAR/DFARS clause library with risk analysis"""
+
+@legal_server.tool("contract_review")
+async def review_contract(contract_text: str, contract_type: str):
+    """Review contract clause-by-clause with risk scoring"""
+
+@legal_server.tool("compliance_check")
+async def check_compliance(document_text: str, regulations: list[str]):
+    """Check FAR/DFARS compliance"""
+
+@legal_server.tool("loophole_detection")
+async def detect_loopholes(document_text: str, document_type: str):
+    """Identify legal loopholes and vulnerabilities"""
+
+@legal_server.tool("risk_assessment")
+async def assess_legal_risk(situation: str, context: str):
+    """Assess legal risk with probability estimates"""
+
+@legal_server.tool("oci_assessment")
+async def assess_oci(company_profile: str, deal_details: str, team: list[str]):
+    """Assess Organizational Conflict of Interest risk"""
+
+@legal_server.tool("protest_precedent_search")
+async def search_protest_precedents(grounds: str, agency: str):
+    """Search GAO/COFC decisions for protest precedents"""
+
+@legal_server.tool("web_legal_search")
+async def search_legal_web(query: str):
+    """Search web for recent legal developments and rule changes"""
+```
+
+### 6D.6 Legal Agent Integration Points
+
+```
+Every Stage of the Deal Pipeline:
+
+INTAKE → RFP legal review, flag high-risk terms
+BID/NO-BID (HITL) → eligibility check, legal risk score, OCI assessment
+CAPTURE PLANNING → teaming agreement drafting, NDA drafting, OCI mitigation
+PROPOSAL DEV → False Claims Act check, certification review, data rights
+PRICING → CAS/TINA compliance, cost allowability, subcontracting plan
+RED TEAM (HITL) → final legal review of entire proposal
+SUBMISSION → certification sign-off, format compliance
+POST-AWARD → contract review, redline, protest assessment
+CONTRACT EXECUTION → compliance monitoring, modifications, claims (REA/CDA)
+```
+
+---
+
 ## 7. Phase 5 — Past Performance Vault
 
 ### 7.1 Past Performance Data Model
@@ -2409,18 +2802,19 @@ ai_orchestrator/
 │   │   ├── agents/
 │   │   │   ├── orchestrator.py          # Master agent (LangGraph graph)
 │   │   │   ├── strategy_agent.py        # Company AI Strategy Agent
-│   │   │   ├── marketing_sales_agent.py # Marketing & Sales Expert Agent (NEW)
-│   │   │   ├── deep_research_agent.py   # Deep Research Agent (NEW)
+│   │   │   ├── marketing_sales_agent.py # Marketing & Sales Expert Agent
+│   │   │   ├── deep_research_agent.py   # Deep Research Agent
+│   │   │   ├── legal_agent.py           # Business Legal Agent (NEW)
 │   │   │   ├── opportunity_scout.py     # Scans & scores opportunities
 │   │   │   ├── rfp_parser.py            # Extracts RFP requirements
 │   │   │   ├── compliance_agent.py      # Builds compliance matrix
 │   │   │   ├── past_perf_agent.py       # RAG retrieval of past performance
 │   │   │   ├── solution_architect.py    # FULL Autonomous SA Agent
 │   │   │   ├── proposal_writer.py       # Section-by-section authoring
-│   │   │   ├── pricing_agent.py         # Intelligent Pricing Agent (UPGRADED)
+│   │   │   ├── pricing_agent.py         # Intelligent Pricing Agent
 │   │   │   ├── qa_agent.py              # Quality & consistency checker
 │   │   │   ├── submission_agent.py      # Package & checklist builder
-│   │   │   ├── contract_agent.py        # Contract drafting & risk scan
+│   │   │   ├── contract_agent.py        # Contract drafting (uses Legal Agent)
 │   │   │   ├── communication_agent.py   # Emails, Q&A, narratives
 │   │   │   └── learning_agent.py        # Policy updates from outcomes
 │   │   ├── mcp_servers/
@@ -2432,7 +2826,8 @@ ai_orchestrator/
 │   │   │   ├── image_search_tools.py    # CLIP-based image/diagram search
 │   │   │   ├── web_research_tools.py    # Web search + gov DB tools (NEW)
 │   │   │   ├── competitive_intel_tools.py # FPDS/USASpending/competitor tools (NEW)
-│   │   │   ├── market_rate_tools.py     # GSA rates, salary data, benchmarks (NEW)
+│   │   │   ├── market_rate_tools.py     # GSA rates, salary data, benchmarks
+│   │   │   ├── legal_tools.py          # Legal RAG, clause library, compliance, OCI (NEW)
 │   │   │   ├── template_render.py       # DOCX/PDF/PPTX/CSV generation
 │   │   │   ├── email_tools.py           # Email drafting & sending
 │   │   │   ├── workflow_tools.py        # Stage transitions & tasks
@@ -2444,8 +2839,9 @@ ai_orchestrator/
 │   │   │   ├── research_graph.py        # Deep research pipeline (NEW)
 │   │   │   ├── solution_arch_graph.py   # Full SA agent pipeline
 │   │   │   ├── proposal_graph.py        # Full proposal generation flow
-│   │   │   ├── pricing_graph.py         # Intelligent pricing optimization (UPGRADED)
-│   │   │   └── contract_graph.py        # Contract generation flow
+│   │   │   ├── pricing_graph.py         # Intelligent pricing optimization
+│   │   │   ├── legal_graph.py          # Legal ReAct agent pipeline (NEW)
+│   │   │   └── contract_graph.py        # Contract generation flow (uses Legal Agent)
 │   ├── rag/
 │   │   ├── embeddings.py          # Embedding generation
 │   │   ├── retriever.py           # Vector search + reranking
@@ -2546,6 +2942,18 @@ EVENTS = {
     "PricingScenariosReady":     {"source": "pricing_agent", "data": "5-7 optimized scenarios"},
     "PricingRecommended":        {"source": "pricing_agent", "data": "AI recommended scenario"},
     "CostVolumeGenerated":       {"source": "pricing_agent", "data": "Volume IV draft"},
+
+    # ── Legal Agent Events (NEW) ──────────────────────────
+    "RFPLegalReviewDone":        {"source": "legal_agent", "data": "RFP legal risk analysis"},
+    "BidLegalRiskAssessed":      {"source": "legal_agent", "data": "bid legal risk score"},
+    "ContractReviewed":          {"source": "legal_agent", "data": "clause-by-clause review"},
+    "ContractDrafted":           {"source": "legal_agent", "data": "drafted contract"},
+    "TeamingReviewed":           {"source": "legal_agent", "data": "teaming agreement review"},
+    "OCIAssessed":               {"source": "legal_agent", "data": "OCI risk + mitigation"},
+    "FARComplianceChecked":      {"source": "legal_agent", "data": "FAR/DFARS compliance report"},
+    "ProposalLegalReviewDone":   {"source": "legal_agent", "data": "proposal legal sign-off"},
+    "ProtestAssessed":           {"source": "legal_agent", "data": "protest viability assessment"},
+    "RegulatoryAlertIssued":     {"source": "legal_agent", "data": "new FAR/DFARS rule alert"},
 
     # ── Proposal & Review Events ───────────────────────────
     "SectionDrafted":            {"source": "proposal_writer", "data": "section content"},
@@ -2668,6 +3076,13 @@ class GoalSetting(models.Model):
 - `ResearchRequest` (research tasks from agents or humans)
 - `ResearchReport` (completed reports with deliverables — PDF, CSV, DOCX)
 - `ResearchActivity` (real-time activity feed during research)
+
+### Business Legal (NEW)
+- `LegalKnowledgeBase` (FAR/DFARS, GAO decisions, contract precedents, ethics — all RAG-indexed)
+- `LegalClauseLibrary` (FAR/DFARS clauses with risk scores, negotiation guidance, flow-down flags)
+- `LegalReview` (per-deal legal analysis with clause-by-clause risk scoring)
+- `LegalEvaluation` (quality evaluation scores — tool correctness, task completion, coverage)
+- `RegulatoryAlert` (monitored FAR/DFARS rule changes affecting active deals)
 
 ### Opportunity Intelligence
 - `OpportunitySource` (SAM.gov, labs, etc.)
@@ -2873,6 +3288,22 @@ ai-deal-manager/
 │       │   │   ├── gov_db_searcher.py    # FPDS, USASpending, SAM.gov search
 │       │   │   └── report_generator.py   # PDF/CSV/DOCX deliverable generation
 │       │   └── tasks.py             # Async research tasks (Celery)
+│       ├── legal/                         # Business Legal (NEW)
+│       │   ├── models.py            # LegalKnowledgeBase, LegalClauseLibrary, LegalReview
+│       │   ├── serializers.py
+│       │   ├── views.py
+│       │   ├── urls.py
+│       │   ├── services/
+│       │   │   ├── legal_rag.py         # Legal knowledge base RAG search
+│       │   │   ├── clause_analyzer.py   # Clause-by-clause risk analysis
+│       │   │   ├── compliance_checker.py # FAR/DFARS compliance engine
+│       │   │   ├── contract_drafter.py  # Contract/NDA/teaming agreement drafting
+│       │   │   ├── oci_assessor.py      # Organizational Conflict of Interest
+│       │   │   ├── protest_advisor.py   # Bid protest viability assessment
+│       │   │   └── evaluation.py        # Legal analysis quality evaluation (DeepEval)
+│       │   ├── management/commands/
+│       │   │   └── seed_legal_kb.py     # Seed FAR clauses, GAO decisions, precedents
+│       │   └── tasks.py             # Async legal analysis tasks (Celery)
 │       ├── knowledge_vault/              # Multimodal Knowledge Vault
 │       │   ├── models.py            # KnowledgeVault, KnowledgeChunk
 │       │   ├── serializers.py
@@ -2922,7 +3353,8 @@ ai-deal-manager/
 │       │   ├── knowledge-vault/      # Knowledge Vault management
 │       │   ├── strategy/             # Company strategy dashboard
 │       │   ├── marketing/            # Capture strategy & competitive intelligence (NEW)
-│       │   ├── research/             # Deep research workspace (NEW)
+│       │   ├── research/             # Deep research workspace
+│       │   ├── legal/               # Legal workspace & clause library (NEW)
 │       │   ├── analytics/
 │       │   ├── settings/
 │       │   └── admin/
@@ -3064,7 +3496,33 @@ ai-deal-manager/
 - [ ] Frontend: Competitor intelligence dashboard
 - [ ] Frontend: Win theme editor & messaging guide viewer
 
-### Sprint 8-9: Deal Pipeline (Phase 3)
+### Sprint 8: Business Legal Agent (Phase 4D — NEW)
+- [ ] LegalKnowledgeBase + LegalClauseLibrary models
+- [ ] Seed FAR clause library (FAR Part 52 clauses with risk levels)
+- [ ] Seed DFARS clause library
+- [ ] Seed GAO bid protest decisions (key precedents)
+- [ ] Legal RAG search engine (pgvector on legal knowledge base)
+- [ ] Legal Agent: RFP legal review (flag high-risk terms, OCI check)
+- [ ] Legal Agent: bid legal risk assessment
+- [ ] Legal Agent: contract review (clause-by-clause with risk scoring)
+- [ ] Legal Agent: contract drafting (teaming, NDA, subcontract templates)
+- [ ] Legal Agent: FAR/DFARS compliance checking engine
+- [ ] Legal Agent: OCI assessment with mitigation plan
+- [ ] Legal Agent: ethics compliance checking
+- [ ] Legal Agent: bid protest viability assessment + precedent search
+- [ ] Legal Agent: proposal legal review (pre-submission sign-off)
+- [ ] Legal Agent: redline analysis with legal impact per change
+- [ ] Legal Agent: evaluation framework (DeepEval-inspired A-F grading)
+- [ ] Legal Agent: ReAct pattern LangGraph (agent→tools→agent loop, max 10 iter)
+- [ ] MCP tools: legal_tools.py (9 tools — RAG, clause search, contract review, etc.)
+- [ ] LangGraph legal_graph.py (full ReAct pipeline)
+- [ ] Legal Agent integrated at EVERY pipeline stage (see integration points)
+- [ ] Frontend: Legal workspace (review dashboard, clause library browser)
+- [ ] Frontend: Contract review viewer (clause-by-clause with risk colors)
+- [ ] Frontend: Legal chat interface (ReAct-powered legal Q&A)
+- [ ] Regulatory change monitoring (via Deep Research Agent)
+
+### Sprint 9-10: Deal Pipeline (Phase 3)
 - [ ] Deal model + workflow state machine
 - [ ] Task & checklist system with templates
 - [ ] Approval system with HITL gates (now includes strategic score)
@@ -3072,7 +3530,7 @@ ai-deal-manager/
 - [ ] Frontend: Deal detail page with timeline
 - [ ] Notifications (in-app + email) for stage changes
 
-### Sprint 10-11: RFP & Past Performance (Phase 4-5)
+### Sprint 11-12: RFP & Past Performance (Phase 4-5)
 - [ ] RFP document upload + AI extraction
 - [ ] Compliance matrix generator
 - [ ] Amendment diff tracker
@@ -3081,7 +3539,7 @@ ai-deal-manager/
 - [ ] Frontend: RFP workspace with compliance matrix
 - [ ] Frontend: Past performance library
 
-### Sprint 12: Multimodal Knowledge Vault
+### Sprint 13: Multimodal Knowledge Vault
 - [ ] KnowledgeVault + KnowledgeChunk models
 - [ ] Upload pipeline: PDF/DOCX/images/presentations → chunk → embed
 - [ ] Text embedding pipeline (OpenAI/Anthropic embeddings → pgvector)
@@ -3091,7 +3549,7 @@ ai-deal-manager/
 - [ ] Frontend: Knowledge Vault management (upload, browse, tag, search)
 - [ ] Seed vault with solutioning frameworks library (TOGAF, C4, arc42, etc.)
 
-### Sprint 13-15: Fully Autonomous AI Solutions Architect + Proposal Studio (Phase 6)
+### Sprint 14-16: Fully Autonomous AI Solutions Architect + Proposal Studio (Phase 6)
 - [ ] Solution Architect Agent: requirement deep-dive analysis
 - [ ] Solution Architect Agent: multimodal knowledge retrieval (RAG)
 - [ ] Solution Architect Agent: framework selection (C4, TOGAF, arc42, etc.)
@@ -3111,7 +3569,7 @@ ai-deal-manager/
 - [ ] Frontend: Review interface with AI coaching + comments
 - [ ] DOCX export with embedded diagrams + professional formatting
 
-### Sprint 16-17: Intelligent Pricing Engine (Phase 7 — MAJOR UPGRADE)
+### Sprint 17-18: Intelligent Pricing Engine (Phase 7)
 - [ ] RateCard + ConsultantProfile models (with market benchmarks)
 - [ ] LOE Estimation Engine: WBS derivation from SA solution
 - [ ] LOE Estimation Engine: analogous/parametric/three-point estimation
@@ -3131,17 +3589,17 @@ ai-deal-manager/
 - [ ] Frontend: Staffing plan visualization (by month, by person)
 - [ ] Frontend: Sensitivity analysis interactive charts
 
-### Sprint 18: Contract Management (Phase 8)
+### Sprint 19: Contract Management (Phase 8 — now powered by Legal Agent)
 - [ ] Contract templates + clause library
 - [ ] Contract risk scanner
 - [ ] Contract drafting from deal specifics
 - [ ] Redline tracking with version history
 - [ ] Frontend: Contract workspace
 
-### Sprint 19-20: AI Orchestration & Learning (Phase 9-10)
-- [ ] LangGraph multi-agent orchestration (16 agents)
-- [ ] MCP tool servers (all integrations — 13 servers)
-- [ ] A2A event system (35+ events)
+### Sprint 20-21: AI Orchestration & Learning (Phase 9-10)
+- [ ] LangGraph multi-agent orchestration (17 agents)
+- [ ] MCP tool servers (all integrations — 14 servers)
+- [ ] A2A event system (45+ events)
 - [ ] Communications agent (email, Q&A)
 - [ ] Policy & goal settings manager
 - [ ] Learning agent (outcome tracking + policy updates + strategy evolution)
@@ -3206,11 +3664,12 @@ JWT_EXPIRATION_HOURS=24
 7. **Intelligent Pricing Agent** maximizes profit while keeping prices unbeatable — derives LOE from solution, uses game-theoretic optimization, runs Monte Carlo sensitivity analysis, generates Volume IV
 8. **Multimodal Knowledge Vault** stores and retrieves your reference architectures, images, diagrams, documents, patterns, and best practices via RAG
 9. **AI generates** compliance matrices, proposal sections, pricing scenarios, contracts — all grounded in YOUR knowledge base
-10. **HITL gates** enforce human approval at all critical decisions
-11. **Learning loop** improves scoring, writing, pricing, marketing, AND evolves company strategy over time
-12. **Professional output** (DOCX proposals with embedded architecture diagrams, proper formatting, branding)
-13. **Full audit trail** for every action (human and AI)
-14. **RBAC** with MFA protecting sensitive operations
-15. **Docker Compose** single-command deployment with no port conflicts
-16. **Real-time** collaboration and notifications via WebSocket
-17. **16 specialized AI agents** orchestrated via LangGraph + MCP + A2A with 35+ inter-agent events
+10. **Business Legal Agent** provides FAR/DFARS compliance, clause-by-clause contract review, OCI assessment, bid protest strategy, and legal sign-off at every pipeline stage — with DeepEval-inspired quality grading
+11. **HITL gates** enforce human approval at all critical decisions
+12. **Learning loop** improves scoring, writing, pricing, marketing, legal, AND evolves company strategy over time
+13. **Professional output** (DOCX proposals with embedded architecture diagrams, proper formatting, branding)
+14. **Full audit trail** for every action (human and AI)
+15. **RBAC** with MFA protecting sensitive operations
+16. **Docker Compose** single-command deployment with no port conflicts
+17. **Real-time** collaboration and notifications via WebSocket
+18. **17 specialized AI agents** orchestrated via LangGraph + MCP + A2A with 45+ inter-agent events
