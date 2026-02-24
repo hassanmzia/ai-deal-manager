@@ -24,12 +24,14 @@ import {
   KeyRound,
   BarChart3,
   Award,
+  Cpu,
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Opportunities", href: "/opportunities", icon: Search },
   { name: "Deals", href: "/deals", icon: Handshake },
+  { name: "Solutions", href: "/solutions", icon: Cpu },
   { name: "RFP", href: "/rfp", icon: FileText },
   { name: "Proposals", href: "/proposals", icon: FileEdit },
   { name: "Pricing", href: "/pricing", icon: DollarSign },
