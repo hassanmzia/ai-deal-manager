@@ -251,7 +251,7 @@ function TechnicalVolumeTab({ volume }: { volume: TechnicalVolume }) {
 }
 
 function ValidationTab({ report }: { report: ValidationReport }) {
-  const pass = report.pass ?? report.overall_quality === "excellent" || report.overall_quality === "good";
+  const pass = report.pass ?? (report.overall_quality === "excellent" || report.overall_quality === "good");
   const score = report.score;
 
   return (
