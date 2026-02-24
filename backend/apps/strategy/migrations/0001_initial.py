@@ -1,6 +1,4 @@
 # Generated migration for strategy app
-
-from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
 import pgvector.django
@@ -12,8 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('core', '0001_initial'),
-        ('accounts', '0001_initial'),
+        ('opportunities', '0001_initial'),
     ]
 
     operations = [
@@ -41,14 +38,14 @@ class Migration(migrations.Migration):
                 ('win_themes', models.JSONField(default=list)),
                 ('pricing_philosophy', models.TextField(blank=True)),
                 ('teaming_strategy', models.TextField(blank=True)),
-                ('technology_roadmap', models.TextField(blank=True)),
-                ('talent_acquisition_plan', models.TextField(blank=True)),
-                ('strategic_risks', models.JSONField(default=list)),
-                ('mitigation_actions', models.JSONField(default=list)),
-                ('success_metrics', models.JSONField(default=list)),
+                ('max_concurrent_proposals', models.IntegerField(default=5)),
+                ('available_key_personnel', models.JSONField(default=list)),
+                ('clearance_capacity', models.JSONField(default=dict)),
+                ('strategy_embedding', pgvector.django.VectorField(dimensions=1536, null=True)),
             ],
             options={
-                'ordering': ['-effective_date'],
+                'verbose_name_plural': 'Company Strategies',
+                'ordering': ['-version'],
             },
         ),
         migrations.CreateModel(
@@ -57,17 +54,19 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('goal_name', models.CharField(max_length=300)),
-                ('goal_description', models.TextField()),
-                ('goal_type', models.CharField(choices=[('revenue', 'Revenue'), ('margin', 'Margin'), ('market_share', 'Market Share'), ('capability', 'Capability'), ('operational', 'Operational'), ('talent', 'Talent')], max_length=50)),
-                ('target_value', models.CharField(blank=True, max_length=100)),
-                ('target_date', models.DateField(blank=True, null=True)),
-                ('status', models.CharField(choices=[('planned', 'Planned'), ('in_progress', 'In Progress'), ('achieved', 'Achieved'), ('at_risk', 'At Risk'), ('off_track', 'Off Track')], default='planned', max_length=20)),
-                ('owner', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='strategic_goals', to=settings.AUTH_USER_MODEL)),
+                ('name', models.CharField(max_length=200)),
+                ('category', models.CharField(choices=[('revenue', 'Revenue Growth'), ('market_entry', 'New Market Entry'), ('market_share', 'Market Share Defense'), ('capability', 'Capability Building'), ('relationship', 'Client Relationship'), ('portfolio', 'Portfolio Balance'), ('profitability', 'Profitability')], max_length=50)),
+                ('metric', models.CharField(max_length=100)),
+                ('current_value', models.FloatField(default=0.0)),
+                ('target_value', models.FloatField()),
+                ('deadline', models.DateField()),
+                ('weight', models.FloatField(default=1.0)),
+                ('status', models.CharField(choices=[('on_track', 'On Track'), ('at_risk', 'At Risk'), ('behind', 'Behind'), ('achieved', 'Achieved')], default='on_track', max_length=20)),
+                ('notes', models.TextField(blank=True)),
                 ('strategy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='goals', to='strategy.companystrategy')),
             ],
             options={
-                'ordering': ['-created_at'],
+                'ordering': ['-weight', 'deadline'],
             },
         ),
         migrations.CreateModel(
@@ -76,9 +75,28 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('opportunity', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='opportunities.opportunity', related_name='strategic_scores')),
+                ('strategic_score', models.FloatField(default=0.0)),
+                ('composite_score', models.FloatField(default=0.0)),
+                ('agency_alignment', models.FloatField(default=0.0)),
+                ('domain_alignment', models.FloatField(default=0.0)),
+                ('growth_market_bonus', models.FloatField(default=0.0)),
+                ('portfolio_balance', models.FloatField(default=0.0)),
+                ('revenue_contribution', models.FloatField(default=0.0)),
+                ('capacity_fit', models.FloatField(default=0.0)),
+                ('relationship_value', models.FloatField(default=0.0)),
+                ('competitive_positioning', models.FloatField(default=0.0)),
+                ('bid_recommendation', models.CharField(choices=[('bid', 'BID'), ('no_bid', 'NO BID'), ('conditional_bid', 'CONDITIONAL BID')], default='conditional_bid', max_length=20)),
+                ('strategic_rationale', models.TextField(blank=True)),
+                ('opportunity_cost', models.TextField(blank=True)),
+                ('portfolio_impact', models.TextField(blank=True)),
+                ('resource_impact', models.TextField(blank=True)),
+                ('scored_at', models.DateTimeField(auto_now=True)),
+                ('opportunity', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='strategic_score', to='opportunities.opportunity')),
                 ('strategy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='strategy.companystrategy')),
             ],
+            options={
+                'ordering': ['-strategic_score'],
+            },
         ),
         migrations.CreateModel(
             name='PortfolioSnapshot',
@@ -86,15 +104,19 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('snapshot_date', models.DateField(auto_now_add=True)),
+                ('snapshot_date', models.DateField()),
+                ('active_deals', models.IntegerField(default=0)),
                 ('total_pipeline_value', models.DecimalField(decimal_places=2, default=0, max_digits=15)),
-                ('active_opportunities', models.IntegerField(default=0)),
-                ('average_deal_value', models.DecimalField(decimal_places=2, default=0, max_digits=15)),
-                ('projected_revenue', models.DecimalField(blank=True, decimal_places=2, max_digits=15, null=True)),
-                ('win_rate_3_month', models.FloatField(default=0.0)),
-                ('pipeline_by_market', models.JSONField(default=dict)),
-                ('pipeline_by_domain', models.JSONField(default=dict)),
-                ('strategy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='portfolio_snapshots', to='strategy.companystrategy')),
+                ('weighted_pipeline', models.DecimalField(decimal_places=2, default=0, max_digits=15)),
+                ('deals_by_agency', models.JSONField(default=dict)),
+                ('deals_by_domain', models.JSONField(default=dict)),
+                ('deals_by_stage', models.JSONField(default=dict)),
+                ('deals_by_size', models.JSONField(default=dict)),
+                ('capacity_utilization', models.FloatField(default=0.0)),
+                ('concentration_risk', models.JSONField(default=dict)),
+                ('strategic_alignment_score', models.FloatField(default=0.0)),
+                ('ai_recommendations', models.JSONField(default=list)),
+                ('strategy', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='strategy.companystrategy')),
             ],
             options={
                 'ordering': ['-snapshot_date'],
