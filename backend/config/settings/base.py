@@ -57,6 +57,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # ── Middleware ────────────────────────────────────────────
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -170,6 +171,15 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost",
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+# ── CSRF ─────────────────────────────────────────────────
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        "CSRF_TRUSTED_ORIGINS", "http://localhost,http://localhost:3027"
+    ).split(",")
+    if origin.strip()
+]
 
 # ── Celery ───────────────────────────────────────────────
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
