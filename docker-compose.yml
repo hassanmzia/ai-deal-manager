@@ -86,7 +86,7 @@ services:
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-changeme}
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-dev-secret-key-change-in-prod}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-jwt-secret-change-in-prod}
-      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-http://localhost:3027,http://127.0.0.1:3027}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-http://172.168.1.95:3027,http://localhost:3027,http://127.0.0.1:3027}
     volumes:
       - ./backend:/app
     depends_on:
