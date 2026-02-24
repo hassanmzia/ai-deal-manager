@@ -15,7 +15,7 @@ interface UserProfile {
 }
 
 const APP_VERSION = "1.0.0";
-const BUILD_ENV = process.env.NODE_ENV || "development";
+const BUILD_ENV: string = process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV || "development";
 
 export default function SettingsPage() {
   const [user, setUser] = useState<UserProfile | null>(null);
