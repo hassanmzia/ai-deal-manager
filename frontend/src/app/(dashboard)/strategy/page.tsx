@@ -7,6 +7,7 @@ import {
   getStrategies,
   getStrategicGoals,
   getPortfolioSnapshots,
+  createStrategy,
 } from "@/services/strategy";
 import {
   CompanyStrategy,
@@ -24,7 +25,10 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
+  Plus,
+  X,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -141,6 +145,149 @@ function ProgressBar({ value, max, color = "bg-blue-500" }: { value: number; max
   );
 }
 
+// ─── new strategy modal ──────────────────────────────────────────────────────
+
+interface NewStrategyModalProps {
+  onClose: () => void;
+  onCreated: (strategy: CompanyStrategy) => void;
+}
+
+function NewStrategyModal({ onClose, onCreated }: NewStrategyModalProps) {
+  const [missionStatement, setMissionStatement] = useState("");
+  const [vision3Year, setVision3Year] = useState("");
+  const [effectiveDate, setEffectiveDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [targetRevenue, setTargetRevenue] = useState("");
+  const [targetWinRate, setTargetWinRate] = useState("30");
+  const [targetMargin, setTargetMargin] = useState("12");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!missionStatement.trim()) {
+      setError("Mission statement is required.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const payload: Partial<CompanyStrategy> = {
+        mission_statement: missionStatement.trim(),
+        vision_3_year: vision3Year.trim(),
+        effective_date: effectiveDate,
+        target_win_rate: Number(targetWinRate) / 100,
+        target_margin: Number(targetMargin) / 100,
+        is_active: true,
+      };
+      if (targetRevenue.trim()) payload.target_revenue = targetRevenue.trim();
+      const newStrategy = await createStrategy(payload);
+      onCreated(newStrategy);
+    } catch {
+      setError("Failed to create strategy. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg rounded-lg border bg-background shadow-lg">
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <h2 className="text-lg font-semibold">New Strategy</h2>
+          <button
+            onClick={onClose}
+            className="rounded p-1 hover:bg-muted text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">
+              Mission Statement <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={missionStatement}
+              onChange={(e) => setMissionStatement(e.target.value)}
+              placeholder="e.g. Deliver mission-critical IT solutions to federal agencies..."
+              rows={3}
+              autoFocus
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">3-Year Vision</label>
+            <textarea
+              value={vision3Year}
+              onChange={(e) => setVision3Year(e.target.value)}
+              placeholder="Where the company wants to be in 3 years..."
+              rows={2}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Effective Date</label>
+            <Input
+              type="date"
+              value={effectiveDate}
+              onChange={(e) => setEffectiveDate(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Target Revenue ($)</label>
+              <Input
+                value={targetRevenue}
+                onChange={(e) => setTargetRevenue(e.target.value)}
+                placeholder="e.g. 50000000"
+                type="number"
+                min="0"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Win Rate (%)</label>
+              <Input
+                value={targetWinRate}
+                onChange={(e) => setTargetWinRate(e.target.value)}
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Margin (%)</label>
+              <Input
+                value={targetMargin}
+                onChange={(e) => setTargetMargin(e.target.value)}
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+              />
+            </div>
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</>
+              ) : (
+                "Create Strategy"
+              )}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── main page ──────────────────────────────────────────────────────────────
 
 export default function StrategyPage() {
@@ -149,6 +296,7 @@ export default function StrategyPage() {
   const [snapshot, setSnapshot] = useState<PortfolioSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showNewModal, setShowNewModal] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -190,15 +338,32 @@ export default function StrategyPage() {
             Active strategic plan driving bid decisions and portfolio management
           </p>
         </div>
-        <Button onClick={fetchData} disabled={loading}>
-          {loading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="mr-2 h-4 w-4" />
-          )}
-          Update Strategy
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={fetchData} disabled={loading}>
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            Refresh
+          </Button>
+          <Button onClick={() => setShowNewModal(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Strategy
+          </Button>
+        </div>
       </div>
+
+      {showNewModal && (
+        <NewStrategyModal
+          onClose={() => setShowNewModal(false)}
+          onCreated={(newStrategy) => {
+            setStrategy(newStrategy);
+            setGoals([]);
+            setShowNewModal(false);
+          }}
+        />
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
