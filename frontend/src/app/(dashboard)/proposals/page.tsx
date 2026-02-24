@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function ProposalsPage() {
   const [proposals, setProposals] = useState([]);
@@ -9,11 +10,8 @@ export default function ProposalsPage() {
   useEffect(() => {
     const fetchProposals = async () => {
       try {
-        const response = await fetch('/api/proposals/proposals/');
-        if (response.ok) {
-          const data = await response.json();
-          setProposals(data.results || data);
-        }
+        const { data } = await api.get('/proposals/proposals/');
+        setProposals(data.results || data);
       } catch (error) {
         console.error('Failed to fetch proposals:', error);
       } finally {

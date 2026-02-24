@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function TeamingPage() {
   const [partnerships, setPartnerships] = useState([]);
@@ -9,11 +10,8 @@ export default function TeamingPage() {
   useEffect(() => {
     const fetchPartnerships = async () => {
       try {
-        const response = await fetch('/api/teaming/partnerships/');
-        if (response.ok) {
-          const data = await response.json();
-          setPartnerships(data.results || data);
-        }
+        const { data } = await api.get('/teaming/partnerships/');
+        setPartnerships(data.results || data);
       } catch (error) {
         console.error('Failed to fetch partnerships:', error);
       } finally {

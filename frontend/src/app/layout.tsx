@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: "AI Deal Manager",
   description:
     "AI-powered deal management platform for opportunities, proposals, and contracts",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

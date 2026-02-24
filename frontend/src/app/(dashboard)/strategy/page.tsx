@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function StrategyPage() {
   const [strategies, setStrategies] = useState([]);
@@ -9,11 +10,8 @@ export default function StrategyPage() {
   useEffect(() => {
     const fetchStrategies = async () => {
       try {
-        const response = await fetch('/api/strategy/strategies/');
-        if (response.ok) {
-          const data = await response.json();
-          setStrategies(data.results || data);
-        }
+        const { data } = await api.get('/strategy/strategies/');
+        setStrategies(data.results || data);
       } catch (error) {
         console.error('Failed to fetch strategies:', error);
       } finally {

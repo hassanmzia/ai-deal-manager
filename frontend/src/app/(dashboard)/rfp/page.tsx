@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function RFPPage() {
   const [documents, setDocuments] = useState([]);
@@ -9,11 +10,8 @@ export default function RFPPage() {
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
-        const response = await fetch('/api/rfp/documents/');
-        if (response.ok) {
-          const data = await response.json();
-          setDocuments(data.results || data);
-        }
+        const { data } = await api.get('/rfp/documents/');
+        setDocuments(data.results || data);
       } catch (error) {
         console.error('Failed to fetch RFP documents:', error);
       } finally {

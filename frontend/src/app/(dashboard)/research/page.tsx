@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function ResearchPage() {
   const [projects, setProjects] = useState([]);
@@ -9,11 +10,8 @@ export default function ResearchPage() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch('/api/research/projects/');
-        if (response.ok) {
-          const data = await response.json();
-          setProjects(data.results || data);
-        }
+        const { data } = await api.get('/research/projects/');
+        setProjects(data.results || data);
       } catch (error) {
         console.error('Failed to fetch research projects:', error);
       } finally {

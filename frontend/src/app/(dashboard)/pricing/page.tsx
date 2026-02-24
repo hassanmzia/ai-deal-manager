@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function PricingPage() {
   const [scenarios, setScenarios] = useState([]);
@@ -9,11 +10,8 @@ export default function PricingPage() {
   useEffect(() => {
     const fetchPricingScenarios = async () => {
       try {
-        const response = await fetch('/api/pricing/scenarios/');
-        if (response.ok) {
-          const data = await response.json();
-          setScenarios(data.results || data);
-        }
+        const { data } = await api.get('/pricing/scenarios/');
+        setScenarios(data.results || data);
       } catch (error) {
         console.error('Failed to fetch pricing scenarios:', error);
       } finally {

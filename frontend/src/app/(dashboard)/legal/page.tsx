@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function LegalPage() {
   const [risks, setRisks] = useState([]);
@@ -9,11 +10,8 @@ export default function LegalPage() {
   useEffect(() => {
     const fetchRisks = async () => {
       try {
-        const response = await fetch('/api/legal/legal-risks/');
-        if (response.ok) {
-          const data = await response.json();
-          setRisks(data.results || data);
-        }
+        const { data } = await api.get('/legal/legal-risks/');
+        setRisks(data.results || data);
       } catch (error) {
         console.error('Failed to fetch legal risks:', error);
       } finally {
