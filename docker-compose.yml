@@ -5,7 +5,7 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "80:80"
+      - "3027:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
@@ -216,7 +216,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-dealmanager}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-dealmanager}
       - NEXTAUTH_SECRET=${LANGFUSE_SECRET_KEY:-langfuse-secret}
-      - NEXTAUTH_URL=http://localhost/langfuse
+      - NEXTAUTH_URL=http://172.168.1.95:3027/langfuse
     depends_on:
       postgres:
         condition: service_healthy
