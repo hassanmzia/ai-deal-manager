@@ -156,14 +156,14 @@ export function Topbar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-accent">
+            <Button variant="ghost" className="flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
                 <User className="h-4 w-4" />
               </div>
               <span className="text-sm font-medium text-foreground">
                 {displayName}
               </span>
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem asChild>
