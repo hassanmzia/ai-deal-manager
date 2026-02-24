@@ -9,5 +9,6 @@ router.register(r"company-profiles", CompanyProfileViewSet, basename="company-pr
 router.register(r"digests", DailyDigestViewSet, basename="daily-digest")
 
 urlpatterns = [
+    path("trigger_scan/", OpportunityViewSet.as_view({"post": "trigger_scan"}), name="trigger-scan"),
     path("", include(router.urls)),
 ]

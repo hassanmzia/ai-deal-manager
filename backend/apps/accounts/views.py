@@ -72,3 +72,40 @@ class ChangePasswordView(UpdateAPIView):
             {"detail": "Password updated successfully."},
             status=status.HTTP_200_OK,
         )
+
+
+class MFASetupView(CreateAPIView):
+    """Setup MFA for the current user."""
+
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        """Initialize MFA setup and return QR code."""
+        # TODO: Implement actual TOTP setup with pyotp and QR code generation
+        # For now, just mark MFA as enabled
+        user = request.user
+        user.is_mfa_enabled = True
+        user.save()
+        return Response(
+            {
+                "detail": "MFA setup initiated. Please scan the QR code with your authenticator app.",
+                "qr_code": "placeholder",  # In production, generate actual QR code
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class MFADisableView(CreateAPIView):
+    """Disable MFA for the current user."""
+
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        """Disable MFA."""
+        user = request.user
+        user.is_mfa_enabled = False
+        user.save()
+        return Response(
+            {"detail": "MFA has been disabled."},
+            status=status.HTTP_200_OK,
+        )
