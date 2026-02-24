@@ -9,7 +9,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const fetchUserSettings = async () => {
       try {
-        const response = await fetch('/api/auth/user/');
+        const response = await fetch('/api/auth/me/');
         if (response.ok) {
           const data = await response.json();
           setUser(data);

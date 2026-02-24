@@ -9,7 +9,7 @@ export default function LegalPage() {
   useEffect(() => {
     const fetchRisks = async () => {
       try {
-        const response = await fetch('/api/legal/risks/');
+        const response = await fetch('/api/legal/legal-risks/');
         if (response.ok) {
           const data = await response.json();
           setRisks(data.results || data);
