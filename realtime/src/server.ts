@@ -3,7 +3,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import { createAdapter } from "@socket.io/redis-adapter";
-import { createClient } from "ioredis";
+import Redis from "ioredis";
 import { authMiddleware } from "./middleware/auth";
 import { registerNotificationHandlers } from "./handlers/notifications";
 import { registerCollaborationHandlers } from "./handlers/collaboration";
@@ -35,7 +35,7 @@ const io = new Server(httpServer, {
 
 async function setupRedisAdapter(): Promise<void> {
   try {
-    const pubClient = new createClient(REDIS_URL);
+    const pubClient = new Redis(REDIS_URL);
     const subClient = pubClient.duplicate();
 
     await Promise.all([
