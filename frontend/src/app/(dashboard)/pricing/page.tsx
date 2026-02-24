@@ -3,11 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   getRateCards,
   getScenarios,
   getLOEEstimates,
   getPricingApprovals,
+  createScenario,
 } from "@/services/pricing";
 import {
   RateCard,
@@ -15,6 +17,8 @@ import {
   LOEEstimate,
   PricingApproval,
 } from "@/types/pricing";
+import { fetchAllDeals } from "@/services/analytics";
+import { Deal } from "@/types/deal";
 import {
   Loader2,
   Plus,
@@ -24,6 +28,7 @@ import {
   TrendingUp,
   CheckCircle,
   BarChart3,
+  X,
 } from "lucide-react";
 
 type ActiveTab = "scenarios" | "rate-cards" | "loe-estimates";
@@ -67,8 +72,103 @@ function formatDate(dateStr: string | null): string {
   });
 }
 
+// ── New Scenario Modal ────────────────────────────────────────────────────
+
+interface NewScenarioModalProps {
+  onClose: () => void;
+  onCreated: (scenario: PricingScenario) => void;
+}
+
+function NewScenarioModal({ onClose, onCreated }: NewScenarioModalProps) {
+  const [name, setName] = useState("");
+  const [scenarioType, setScenarioType] = useState("fixed_price");
+  const [dealId, setDealId] = useState("");
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [dealsLoading, setDealsLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const scenarioTypes = [
+    { value: "cost_plus", label: "Cost Plus" },
+    { value: "fixed_price", label: "Fixed Price" },
+    { value: "time_material", label: "Time & Materials" },
+    { value: "idiq", label: "IDIQ" },
+  ];
+
+  useEffect(() => {
+    fetchAllDeals()
+      .then((d) => setDeals(d))
+      .catch(() => {})
+      .finally(() => setDealsLoading(false));
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !dealId) {
+      setError("Name and deal are required.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const scenario = await createScenario({ name: name.trim(), scenario_type: scenarioType as PricingScenario["scenario_type"], deal: dealId });
+      onCreated(scenario);
+    } catch {
+      setError("Failed to create scenario. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-lg border bg-background shadow-lg">
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <h2 className="text-lg font-semibold">New Pricing Scenario</h2>
+          <button onClick={onClose} className="rounded p-1 hover:bg-muted text-muted-foreground hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Scenario Name <span className="text-red-500">*</span></label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Base Scenario – FFP" autoFocus />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Type</label>
+            <select value={scenarioType} onChange={(e) => setScenarioType(e.target.value)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+              {scenarioTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Deal <span className="text-red-500">*</span></label>
+            {dealsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2"><Loader2 className="h-4 w-4 animate-spin" />Loading deals...</div>
+            ) : (
+              <select value={dealId} onChange={(e) => setDealId(e.target.value)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                <option value="">Select a deal...</option>
+                {deals.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
+              </select>
+            )}
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+            <Button type="submit" disabled={submitting || dealsLoading}>
+              {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</> : "Create Scenario"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────
+
 export default function PricingPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("scenarios");
+  const [showNewModal, setShowNewModal] = useState(false);
 
   // Data state
   const [scenarios, setScenarios] = useState<PricingScenario[]>([]);
@@ -187,11 +287,21 @@ export default function PricingPage() {
             Manage pricing scenarios, rate cards, and level-of-effort estimates
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setShowNewModal(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Scenario
         </Button>
       </div>
+
+      {showNewModal && (
+        <NewScenarioModal
+          onClose={() => setShowNewModal(false)}
+          onCreated={(scenario) => {
+            setScenarios((prev) => [scenario, ...prev]);
+            setShowNewModal(false);
+          }}
+        />
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

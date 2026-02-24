@@ -7,8 +7,11 @@ import { Input } from "@/components/ui/input";
 import {
   getContracts,
   getContractClauses,
+  createContract,
 } from "@/services/contracts";
 import { Contract, ContractClause, ContractType, ContractStatus } from "@/types/contract";
+import { fetchAllDeals } from "@/services/analytics";
+import { Deal } from "@/types/deal";
 import {
   Loader2,
   Plus,
@@ -17,6 +20,7 @@ import {
   DollarSign,
   CheckCircle,
   AlertTriangle,
+  X,
 } from "lucide-react";
 
 type ActiveTab = "contracts" | "clauses";
@@ -118,8 +122,109 @@ function isExpiringSoon(endDate: string | null): boolean {
   return diffDays >= 0 && diffDays <= 90;
 }
 
+// ── New Contract Modal ────────────────────────────────────────────────────
+
+interface NewContractModalProps {
+  onClose: () => void;
+  onCreated: (contract: Contract) => void;
+}
+
+function NewContractModal({ onClose, onCreated }: NewContractModalProps) {
+  const [title, setTitle] = useState("");
+  const [contractNumber, setContractNumber] = useState("");
+  const [contractType, setContractType] = useState<ContractType>("FFP");
+  const [dealId, setDealId] = useState("");
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [dealsLoading, setDealsLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const allTypes: ContractType[] = ["FFP", "T&M", "CPFF", "CPAF", "CPIF", "IDIQ", "BPA"];
+
+  useEffect(() => {
+    fetchAllDeals()
+      .then((d) => setDeals(d))
+      .catch(() => {})
+      .finally(() => setDealsLoading(false));
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setError("Title is required.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const payload: Partial<Contract> = {
+        title: title.trim(),
+        contract_type: contractType,
+      };
+      if (contractNumber.trim()) payload.contract_number = contractNumber.trim();
+      if (dealId) payload.deal = dealId;
+      const contract = await createContract(payload);
+      onCreated(contract);
+    } catch {
+      setError("Failed to create contract. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-lg border bg-background shadow-lg">
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <h2 className="text-lg font-semibold">New Contract</h2>
+          <button onClick={onClose} className="rounded p-1 hover:bg-muted text-muted-foreground hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Title <span className="text-red-500">*</span></label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. CIO-SP4 Task Order 001" autoFocus />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Contract Number</label>
+            <Input value={contractNumber} onChange={(e) => setContractNumber(e.target.value)} placeholder="e.g. GS-00T-24-001" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Contract Type</label>
+            <select value={contractType} onChange={(e) => setContractType(e.target.value as ContractType)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+              {allTypes.map((t) => <option key={t} value={t}>{CONTRACT_TYPE_LABELS[t]}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Deal (optional)</label>
+            {dealsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2"><Loader2 className="h-4 w-4 animate-spin" />Loading deals...</div>
+            ) : (
+              <select value={dealId} onChange={(e) => setDealId(e.target.value)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                <option value="">No deal selected</option>
+                {deals.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
+              </select>
+            )}
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</> : "Create Contract"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────
+
 export default function ContractsPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("contracts");
+  const [showNewModal, setShowNewModal] = useState(false);
 
   // Data state
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -211,11 +316,21 @@ export default function ContractsPage() {
             Track contracts, templates, and clause library
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setShowNewModal(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Contract
         </Button>
       </div>
+
+      {showNewModal && (
+        <NewContractModal
+          onClose={() => setShowNewModal(false)}
+          onCreated={(contract) => {
+            setContracts((prev) => [contract, ...prev]);
+            setShowNewModal(false);
+          }}
+        />
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
