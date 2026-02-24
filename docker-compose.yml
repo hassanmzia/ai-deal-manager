@@ -224,6 +224,7 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-dealmanager}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-dealmanager}
       - NEXTAUTH_SECRET=${LANGFUSE_SECRET_KEY:-langfuse-secret}
       - NEXTAUTH_URL=http://172.168.1.95:3027/langfuse
+      - SALT=${LANGFUSE_SALT:-0f6d3e8c9a2b4f7d1a5e9c3b8f2d7a4e6c1b9f3d8e5a2c7f1d4b9e6a3c8f2}
     depends_on:
       postgres:
         condition: service_healthy
