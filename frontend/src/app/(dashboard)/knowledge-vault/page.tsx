@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getDocuments } from "@/services/knowledge-vault";
+import { getDocuments, uploadDocument } from "@/services/knowledge-vault";
 import { KnowledgeDocument, DocumentCategory } from "@/types/knowledge-vault";
 import {
   Loader2,
@@ -15,6 +15,7 @@ import {
   FileText,
   CheckCircle2,
   Files,
+  X,
 } from "lucide-react";
 
 const CATEGORY_STYLES: Record<DocumentCategory, string> = {
@@ -70,6 +71,93 @@ function truncate(str: string, maxLen: number): string {
   return str.length > maxLen ? str.slice(0, maxLen) + "..." : str;
 }
 
+// ── Upload Document Modal ─────────────────────────────────────────────────
+
+interface UploadDocumentModalProps {
+  onClose: () => void;
+  onCreated: (doc: KnowledgeDocument) => void;
+}
+
+function UploadDocumentModal({ onClose, onCreated }: UploadDocumentModalProps) {
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState<DocumentCategory>("template");
+  const [description, setDescription] = useState("");
+  const [content, setContent] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setError("Title is required.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("title", title.trim());
+      formData.append("category", category);
+      if (description.trim()) formData.append("description", description.trim());
+      formData.append("content", content.trim() || title.trim());
+      const doc = await uploadDocument(formData);
+      onCreated(doc);
+    } catch {
+      setError("Failed to upload document. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-lg border bg-background shadow-lg">
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <h2 className="text-lg font-semibold">Upload Document</h2>
+          <button onClick={onClose} className="rounded p-1 hover:bg-muted text-muted-foreground hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Title <span className="text-red-500">*</span></label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Proposal Writing Best Practices" autoFocus />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Category</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value as DocumentCategory)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+              {ALL_CATEGORIES.map((cat) => <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Description</label>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description (optional)" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Content</label>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Paste document content here..."
+              rows={4}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+            />
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading...</> : <><Upload className="mr-2 h-4 w-4" />Upload</>}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────
+
 export default function KnowledgeVaultPage() {
   const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +165,7 @@ export default function KnowledgeVaultPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const fetchDocuments = useCallback(async () => {
     setLoading(true);
@@ -117,11 +206,21 @@ export default function KnowledgeVaultPage() {
             Centralized repository for documents, templates, and best practices
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setShowUploadModal(true)}>
           <Upload className="mr-2 h-4 w-4" />
           Upload Document
         </Button>
       </div>
+
+      {showUploadModal && (
+        <UploadDocumentModal
+          onClose={() => setShowUploadModal(false)}
+          onCreated={(doc) => {
+            setDocuments((prev) => [doc, ...prev]);
+            setShowUploadModal(false);
+          }}
+        />
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

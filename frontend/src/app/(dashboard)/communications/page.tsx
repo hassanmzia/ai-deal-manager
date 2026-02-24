@@ -3,17 +3,21 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   getThreads,
   getMessages,
   sendMessage,
   getClarificationQuestions,
+  createThread,
 } from "@/services/communications";
 import {
   CommunicationThread,
   Message,
   ClarificationQuestion,
 } from "@/types/communications";
+import { fetchAllDeals } from "@/services/analytics";
+import { Deal } from "@/types/deal";
 import {
   Loader2,
   MessageSquare,
@@ -21,6 +25,7 @@ import {
   Send,
   Plus,
   ChevronRight,
+  X,
 } from "lucide-react";
 
 type TabId = "threads" | "clarifications";
@@ -90,7 +95,107 @@ function truncate(str: string, maxLen: number): string {
   return str.length > maxLen ? str.slice(0, maxLen) + "..." : str;
 }
 
+// ── New Thread Modal ──────────────────────────────────────────────────────
+
+interface NewThreadModalProps {
+  onClose: () => void;
+  onCreated: (thread: CommunicationThread) => void;
+}
+
+function NewThreadModal({ onClose, onCreated }: NewThreadModalProps) {
+  const [subject, setSubject] = useState("");
+  const [threadType, setThreadType] = useState("internal");
+  const [dealId, setDealId] = useState("");
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [dealsLoading, setDealsLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const threadTypes = [
+    { value: "internal", label: "Internal" },
+    { value: "client", label: "Client" },
+    { value: "agency", label: "Agency" },
+    { value: "vendor", label: "Vendor" },
+    { value: "teaming_partner", label: "Teaming Partner" },
+  ];
+
+  useEffect(() => {
+    fetchAllDeals()
+      .then((d) => setDeals(d))
+      .catch(() => {})
+      .finally(() => setDealsLoading(false));
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim()) {
+      setError("Subject is required.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const thread = await createThread({
+        subject: subject.trim(),
+        thread_type: threadType as CommunicationThread["thread_type"],
+        deal: dealId || undefined,
+      });
+      onCreated(thread);
+    } catch {
+      setError("Failed to create thread. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-lg border bg-background shadow-lg">
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <h2 className="text-lg font-semibold">New Thread</h2>
+          <button onClick={onClose} className="rounded p-1 hover:bg-muted text-muted-foreground hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Subject <span className="text-red-500">*</span></label>
+            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Technical Questions – RFP Section L" autoFocus />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Type</label>
+            <select value={threadType} onChange={(e) => setThreadType(e.target.value)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+              {threadTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Deal (optional)</label>
+            {dealsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2"><Loader2 className="h-4 w-4 animate-spin" />Loading deals...</div>
+            ) : (
+              <select value={dealId} onChange={(e) => setDealId(e.target.value)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                <option value="">No deal selected</option>
+                {deals.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
+              </select>
+            )}
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</> : "Create Thread"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────
+
 export default function CommunicationsPage() {
+  const [showNewModal, setShowNewModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("threads");
   const [threads, setThreads] = useState<CommunicationThread[]>([]);
   const [selectedThread, setSelectedThread] =
@@ -186,11 +291,21 @@ export default function CommunicationsPage() {
             Manage threads, messages, and clarification questions
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setShowNewModal(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Thread
         </Button>
       </div>
+
+      {showNewModal && (
+        <NewThreadModal
+          onClose={() => setShowNewModal(false)}
+          onCreated={(thread) => {
+            setThreads((prev) => [thread, ...prev]);
+            setShowNewModal(false);
+          }}
+        />
+      )}
 
       {/* Tabs */}
       <div className="border-b">
