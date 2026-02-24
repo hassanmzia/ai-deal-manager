@@ -99,10 +99,11 @@ export async function fetchPendingApprovals(): Promise<PendingApproval[]> {
 }
 
 export async function fetchRecentOpportunities(): Promise<Opportunity[]> {
-  const response = await api.get("/opportunities/", {
+  const response = await api.get("/opportunities/opportunities/", {
     params: { ordering: "-posted_date", page_size: 10 },
   });
-  return response.data.results ?? response.data ?? [];
+  const data = response.data.results ?? response.data;
+  return Array.isArray(data) ? data : [];
 }
 
 export async function fetchActiveProposals(): Promise<Proposal[]> {
