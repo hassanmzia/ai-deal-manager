@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { runSolutionArchitect } from "@/services/architecture";
 import { getDeals } from "@/services/deals";
 import { Deal } from "@/types/deal";
@@ -83,11 +83,14 @@ function DiagramCard({ diagram }: { diagram: ArchitectureDiagram }) {
               {copied ? " Copied!" : ""}
             </Button>
             {previewUrl && (
-              <Button size="sm" variant="ghost" asChild>
-                <a href={previewUrl} target="_blank" rel="noreferrer">
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </Button>
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={buttonVariants({ size: "sm", variant: "ghost" })}
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
             )}
             <Button
               size="sm"
