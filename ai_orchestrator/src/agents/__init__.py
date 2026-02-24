@@ -5,6 +5,7 @@ from src.agents.marketing_agent import MarketingAgent
 from src.agents.pricing_agent import PricingAgent
 from src.agents.teaming_agent import TeamingAgent
 from src.agents.security_compliance_agent import SecurityComplianceAgent
+from src.agents.solution_architect_agent import SolutionArchitectAgent
 
 __all__ = [
     "StrategyAgent",
@@ -14,4 +15,5 @@ __all__ = [
     "PricingAgent",
     "TeamingAgent",
     "SecurityComplianceAgent",
+    "SolutionArchitectAgent",
 ]

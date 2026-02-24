@@ -5,6 +5,7 @@ from src.graphs.teaming_graph import teaming_graph
 from src.graphs.security_compliance_graph import security_compliance_graph
 from src.graphs.legal_graph import legal_graph
 from src.graphs.marketing_graph import marketing_graph
+from src.graphs.solution_arch_graph import solution_architect_graph
 
 __all__ = [
     "strategy_graph",
@@ -14,4 +15,5 @@ __all__ = [
     "security_compliance_graph",
     "legal_graph",
     "marketing_graph",
+    "solution_architect_graph",
 ]
