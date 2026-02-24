@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.generics import (
     CreateAPIView,
     ListAPIView,
+    ListCreateAPIView,
     RetrieveUpdateAPIView,
     UpdateAPIView,
 )
@@ -13,6 +14,7 @@ from apps.accounts.permissions import IsAdmin
 from apps.accounts.serializers import (
     ChangePasswordSerializer,
     RegisterSerializer,
+    UserCreateSerializer,
     UserProfileSerializer,
     UserSerializer,
 )
@@ -46,12 +48,24 @@ class UserProfileView(RetrieveUpdateAPIView):
         return self.request.user.profile
 
 
-class UserListView(ListAPIView):
-    """List all users (admin only)."""
+class UserListView(ListCreateAPIView):
+    """List all users or create a new user (admin only, except first user)."""
 
-    serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated, IsAdmin]
     queryset = User.objects.all()
+
+    def get_permissions(self):
+        """
+        Allow anyone to create the first user as admin (bootstrap).
+        After that, only admins can list or create users.
+        """
+        if self.request.method == "POST" and not User.objects.exists():
+            return [AllowAny()]
+        return [IsAuthenticated(), IsAdmin()]
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return UserCreateSerializer
+        return UserSerializer
 
 
 class ChangePasswordView(UpdateAPIView):
