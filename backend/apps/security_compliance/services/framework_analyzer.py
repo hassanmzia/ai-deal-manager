@@ -40,20 +40,75 @@ class FrameworkAnalyzer:
             )
             return []
 
-        # Placeholder: return all active frameworks with a generic rationale.
+        # Agency/keyword rules for framework applicability
+        agency = (
+            (deal.opportunity.agency if deal.opportunity else "") or ""
+        ).upper()
+        title_upper = deal.title.upper()
+
+        likely_keywords: list[str] = []
+
+        dod_tokens = {"DOD", "DEPARTMENT OF DEFENSE", "ARMY", "NAVY", "AIR FORCE",
+                      "MARINES", "SOCOM", "DARPA", "DIA", "NSA", "DISA"}
+        if any(tok in agency for tok in dod_tokens):
+            likely_keywords.extend(["CMMC", "800-171", "800-53", "DISA"])
+
+        civilian_tokens = {"GSA", "DHS", "DOJ", "STATE", "TREASURY", "HUD",
+                           "DOT", "DOE", "DOL", "DOC", "USDA", "DOI", "EPA",
+                           "SBA", "SSA", "VA", "OPM"}
+        if any(tok in agency for tok in civilian_tokens):
+            likely_keywords.extend(["800-53", "FISMA"])
+
+        if any(tok in agency for tok in {"HHS", "NIH", "CDC", "FDA", "CMS", "HEALTH"}):
+            likely_keywords.extend(["HIPAA", "800-53"])
+
+        cloud_tokens = {"CLOUD", "SAAS", "IAAS", "PAAS", "AWS", "AZURE", "GCP"}
+        if any(k in title_upper for k in cloud_tokens) or any(k in agency for k in cloud_tokens):
+            likely_keywords.append("FEDRAMP")
+
+        if any(k in title_upper for k in {"ITAR", "EAR", "EXPORT", "MUNITIONS"}):
+            likely_keywords.extend(["800-53", "CMMC"])
+
+        # Always baseline-include NIST 800-53 / FISMA for any federal contract
+        if not likely_keywords:
+            likely_keywords.extend(["800-53", "FISMA"])
+
+        likely_upper = [k.upper() for k in likely_keywords]
+
         frameworks = SecurityFramework.objects.filter(is_active=True)
         results = []
         for fw in frameworks:
+            fw_upper = fw.name.upper()
+            if not any(kw in fw_upper for kw in likely_upper):
+                continue
+
+            rationale_parts: list[str] = []
+            if any(k in fw_upper for k in ("CMMC", "800-171")):
+                rationale_parts.append(
+                    "Required for DoD contracts handling CUI per DFARS 252.204-7012."
+                )
+            if "800-53" in fw_upper or "FISMA" in fw_upper:
+                rationale_parts.append(
+                    f"Required under FISMA for federal information systems "
+                    f"(agency: {deal.opportunity.agency if deal.opportunity else 'federal'})."
+                )
+            if "FEDRAMP" in fw_upper:
+                rationale_parts.append(
+                    "Required for cloud service offerings in federal environments."
+                )
+            if "HIPAA" in fw_upper:
+                rationale_parts.append(
+                    "Required for contracts handling Protected Health Information (PHI)."
+                )
+            if not rationale_parts:
+                rationale_parts.append(f"Applicable based on deal context: '{deal.title}'.")
+
             results.append(
                 {
                     "id": str(fw.id),
                     "name": fw.name,
                     "version": fw.version,
-                    "rationale": (
-                        f"Framework '{fw.name}' has been flagged for review "
-                        f"based on deal '{deal.title}'. Full applicability "
-                        f"analysis pending."
-                    ),
+                    "rationale": " ".join(rationale_parts),
                 }
             )
 
