@@ -93,56 +93,64 @@ export function Topbar() {
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
-            <DropdownMenuLabel className="flex justify-between items-center">
-              <span>Notifications</span>
+          <DropdownMenuContent align="end" className="w-80">
+            <div className="flex items-center justify-between px-2 py-2">
+              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
               {unreadCount > 0 && (
                 <button
-                  onClick={clearAll}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    clearAll();
+                  }}
                   className="text-xs text-muted-foreground hover:text-foreground"
                 >
                   Clear all
                 </button>
               )}
-            </DropdownMenuLabel>
+            </div>
             <DropdownMenuSeparator />
-            {notifications.length === 0 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                No notifications
-              </div>
-            ) : (
-              notifications.map((notification) => (
-                <div key={notification.id} className="border-b last:border-b-0">
-                  <div className="flex items-start gap-3 px-2 py-3 hover:bg-accent transition-colors group">
-                    <div
-                      className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${
-                        notification.type === 'success'
-                          ? 'bg-green-500'
-                          : notification.type === 'warning'
-                          ? 'bg-yellow-500'
-                          : notification.type === 'error'
-                          ? 'bg-red-500'
-                          : 'bg-blue-500'
-                      }`}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground break-words">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatTime(notification.timestamp)}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => removeNotification(notification.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
-                    >
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </button>
-                  </div>
+            <div className="max-h-80 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No notifications
                 </div>
-              ))
-            )}
+              ) : (
+                notifications.map((notification) => (
+                  <div key={notification.id} className="border-b last:border-b-0">
+                    <div className="flex items-start gap-3 px-2 py-3 hover:bg-accent transition-colors group">
+                      <div
+                        className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${
+                          notification.type === 'success'
+                            ? 'bg-green-500'
+                            : notification.type === 'warning'
+                            ? 'bg-yellow-500'
+                            : notification.type === 'error'
+                            ? 'bg-red-500'
+                            : 'bg-blue-500'
+                        }`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground break-words">
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatTime(notification.timestamp)}
+                        </p>
+                      </div>
+                      <button
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          removeNotification(notification.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
+                      >
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
 
