@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function SecurityPage() {
   const [reports, setReports] = useState([]);
@@ -9,11 +10,8 @@ export default function SecurityPage() {
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const response = await fetch('/api/security-compliance/reports/');
-        if (response.ok) {
-          const data = await response.json();
-          setReports(data.results || data);
-        }
+        const { data } = await api.get('/security-compliance/reports/');
+        setReports(data.results || data);
       } catch (error) {
         console.error('Failed to fetch security reports:', error);
       } finally {

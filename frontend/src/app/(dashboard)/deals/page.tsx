@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function DealsPage() {
   const [deals, setDeals] = useState([]);
@@ -9,11 +10,8 @@ export default function DealsPage() {
   useEffect(() => {
     const fetchDeals = async () => {
       try {
-        const response = await fetch('/api/deals/deals/');
-        if (response.ok) {
-          const data = await response.json();
-          setDeals(data.results || data);
-        }
+        const { data } = await api.get('/deals/deals/');
+        setDeals(data.results || data);
       } catch (error) {
         console.error('Failed to fetch deals:', error);
       } finally {

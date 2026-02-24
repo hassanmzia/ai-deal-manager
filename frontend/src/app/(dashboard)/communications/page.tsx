@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function CommunicationsPage() {
   const [threads, setThreads] = useState([]);
@@ -9,11 +10,8 @@ export default function CommunicationsPage() {
   useEffect(() => {
     const fetchThreads = async () => {
       try {
-        const response = await fetch('/api/communications/threads/');
-        if (response.ok) {
-          const data = await response.json();
-          setThreads(data.results || data);
-        }
+        const { data } = await api.get('/communications/threads/');
+        setThreads(data.results || data);
       } catch (error) {
         console.error('Failed to fetch communications:', error);
       } finally {

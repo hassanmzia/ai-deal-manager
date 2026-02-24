@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function ContractsPage() {
   const [contracts, setContracts] = useState([]);
@@ -9,11 +10,8 @@ export default function ContractsPage() {
   useEffect(() => {
     const fetchContracts = async () => {
       try {
-        const response = await fetch('/api/contracts/contracts/');
-        if (response.ok) {
-          const data = await response.json();
-          setContracts(data.results || data);
-        }
+        const { data } = await api.get('/contracts/contracts/');
+        setContracts(data.results || data);
       } catch (error) {
         console.error('Failed to fetch contracts:', error);
       } finally {

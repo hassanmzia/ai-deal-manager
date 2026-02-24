@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null);
@@ -9,11 +10,8 @@ export default function SettingsPage() {
   useEffect(() => {
     const fetchUserSettings = async () => {
       try {
-        const response = await fetch('/api/auth/me/');
-        if (response.ok) {
-          const data = await response.json();
-          setUser(data);
-        }
+        const { data } = await api.get('/auth/me/');
+        setUser(data);
       } catch (error) {
         console.error('Failed to fetch user settings:', error);
       } finally {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function MarketingPage() {
   const [campaigns, setCampaigns] = useState([]);
@@ -9,11 +10,8 @@ export default function MarketingPage() {
   useEffect(() => {
     const fetchCampaigns = async () => {
       try {
-        const response = await fetch('/api/marketing/campaigns/');
-        if (response.ok) {
-          const data = await response.json();
-          setCampaigns(data.results || data);
-        }
+        const { data } = await api.get('/marketing/campaigns/');
+        setCampaigns(data.results || data);
       } catch (error) {
         console.error('Failed to fetch marketing campaigns:', error);
       } finally {
