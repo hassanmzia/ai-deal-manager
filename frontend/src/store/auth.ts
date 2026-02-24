@@ -9,6 +9,10 @@ interface User {
   email: string;
   first_name: string;
   last_name: string;
+  role?: "admin" | "executive" | "capture_manager" | "proposal_manager" | "viewer" | "user";
+  is_mfa_enabled?: boolean;
+  is_active?: boolean;
+  date_joined?: string;
 }
 
 interface Tokens {
