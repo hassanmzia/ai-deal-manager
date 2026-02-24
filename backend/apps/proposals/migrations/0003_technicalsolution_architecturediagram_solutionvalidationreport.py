@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("deals", "0001_initial"),
-        ("proposals", "0001_initial"),
+        ("proposals", "0002_alter_proposaltemplate_options"),
     ]
 
     operations = [
