@@ -7,6 +7,7 @@ from apps.accounts.views import (
     MFASetupView,
     RegisterView,
     UserListView,
+    UserMeView,
     UserProfileView,
 )
 
@@ -15,6 +16,7 @@ app_name = "accounts"
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("profile/", UserProfileView.as_view(), name="profile"),
+    path("me/", UserMeView.as_view(), name="user-me"),
     path("users/", UserListView.as_view(), name="user-list"),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
     path("mfa/setup/", MFASetupView.as_view(), name="mfa-setup"),

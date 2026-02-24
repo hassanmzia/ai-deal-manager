@@ -109,3 +109,13 @@ class MFADisableView(CreateAPIView):
             {"detail": "MFA has been disabled."},
             status=status.HTTP_200_OK,
         )
+
+
+class UserMeView(RetrieveUpdateAPIView):
+    """Retrieve or update the current authenticated user."""
+
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
