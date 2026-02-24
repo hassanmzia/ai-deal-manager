@@ -167,6 +167,67 @@ class DealViewSet(viewsets.ModelViewSet):
             }
         )
 
+    @action(detail=True, methods=["post"], url_path="run-solution-architect")
+    def run_solution_architect(self, request, pk=None):
+        """Trigger the Solution Architect Agent for this deal.
+
+        Runs the full 9-node LangGraph pipeline:
+        load_context → analyze_requirements → select_frameworks →
+        retrieve_knowledge → synthesize_solution → generate_diagrams →
+        generate_volume → validate → (refine loop)
+
+        Returns the complete architecture output synchronously.
+        For long-running jobs, consider using a Celery task.
+        """
+        deal = self.get_object()
+
+        try:
+            import asyncio
+            from ai_orchestrator.src.agents.solution_architect_agent import SolutionArchitectAgent
+
+            agent = SolutionArchitectAgent()
+            result = asyncio.run(agent.run(
+                deal_id=str(deal.id),
+                opportunity_id=str(deal.opportunity_id),
+            ))
+
+            # Persist technical volume sections as ProposalSection records if a proposal exists
+            try:
+                from apps.proposals.models import Proposal, ProposalSection
+
+                proposal = Proposal.objects.filter(deal=deal).first()
+                if proposal and result.get("technical_volume", {}).get("sections"):
+                    for i, (title, content) in enumerate(
+                        result["technical_volume"]["sections"].items()
+                    ):
+                        ProposalSection.objects.update_or_create(
+                            proposal=proposal,
+                            volume="Volume I – Technical",
+                            title=title,
+                            defaults={
+                                "section_number": f"1.{i + 1}",
+                                "order": i,
+                                "ai_draft": content,
+                                "is_ai_generated": True,
+                            },
+                        )
+            except Exception:
+                pass  # Persisting sections is optional; don't fail the whole request
+
+            return Response(result, status=status.HTTP_200_OK)
+
+        except ImportError as exc:
+            return Response(
+                {"error": f"Solution Architect Agent not available: {exc}"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except Exception as exc:
+            logger.exception("Solution Architect Agent failed for deal %s", pk)
+            return Response(
+                {"error": str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
 
 # ── Task ViewSet ─────────────────────────────────────────
 
