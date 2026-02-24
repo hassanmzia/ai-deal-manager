@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/auth";
-import { getUsers, createUser, User } from "@/services/users";
+import { getUsers, createUser, updateUser, User } from "@/services/users";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, Edit2, Trash2, Search, X } from "lucide-react";
@@ -19,34 +19,49 @@ const ROLES = [
   { value: "viewer", label: "Viewer" },
 ];
 
+type FormMode = "create" | "edit";
+
+interface FormData {
+  username: string;
+  email: string;
+  password: string;
+  password_confirm: string;
+  first_name: string;
+  last_name: string;
+  role: User["role"];
+  is_active: boolean;
+}
+
+const EMPTY_FORM: FormData = {
+  username: "",
+  email: "",
+  password: "",
+  password_confirm: "",
+  first_name: "",
+  last_name: "",
+  role: "viewer",
+  is_active: true,
+};
+
 export default function AdminUsersPage() {
   const user = useAuthStore((state) => state.user);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [formMode, setFormMode] = useState<FormMode>("create");
   const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    password: "",
-    password_confirm: "",
-    first_name: "",
-    last_name: "",
-    role: "viewer" as const,
-  });
+  const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
 
-  // Check if user is admin
   useEffect(() => {
     if (user && user.role !== "admin") {
       setError("Access denied. Only admins can manage users.");
     }
   }, [user]);
 
-  // Fetch users
   useEffect(() => {
     if (user?.role === "admin") {
       fetchUsers();
@@ -76,31 +91,35 @@ export default function AdminUsersPage() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case "admin":
-        return "bg-red-100 text-red-800";
-      case "executive":
-        return "bg-purple-100 text-purple-800";
-      case "capture_manager":
-        return "bg-blue-100 text-blue-800";
-      case "proposal_manager":
-        return "bg-green-100 text-green-800";
-      case "viewer":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-gray-100 text-gray-800";
+      case "admin": return "bg-red-100 text-red-800";
+      case "executive": return "bg-purple-100 text-purple-800";
+      case "capture_manager": return "bg-blue-100 text-blue-800";
+      case "proposal_manager": return "bg-green-100 text-green-800";
+      case "viewer": return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-gray-800";
     }
   };
 
-  const handleOpenModal = () => {
+  const handleOpenCreate = () => {
+    setFormMode("create");
     setSelectedUser(null);
+    setFormData(EMPTY_FORM);
+    setFormError(null);
+    setShowModal(true);
+  };
+
+  const handleOpenEdit = (u: User) => {
+    setFormMode("edit");
+    setSelectedUser(u);
     setFormData({
-      username: "",
-      email: "",
+      username: u.username,
+      email: u.email,
       password: "",
       password_confirm: "",
-      first_name: "",
-      last_name: "",
-      role: "viewer",
+      first_name: u.first_name,
+      last_name: u.last_name,
+      role: u.role,
+      is_active: u.is_active,
     });
     setFormError(null);
     setShowModal(true);
@@ -113,10 +132,10 @@ export default function AdminUsersPage() {
   };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     }));
   };
 
@@ -124,35 +143,77 @@ export default function AdminUsersPage() {
     e.preventDefault();
     setFormError(null);
 
-    if (!formData.username || !formData.email || !formData.password) {
-      setFormError("Username, email, and password are required");
-      return;
-    }
-
-    if (formData.password !== formData.password_confirm) {
-      setFormError("Passwords do not match");
-      return;
-    }
-
-    try {
-      setFormLoading(true);
-      const newUser = await createUser(formData);
-      setUsers([...users, newUser]);
-      handleCloseModal();
-    } catch (err: any) {
-      const message = err?.response?.data?.detail || err?.message || "Failed to create user";
-      setFormError(message);
-    } finally {
-      setFormLoading(false);
+    if (formMode === "create") {
+      if (!formData.username || !formData.email || !formData.password) {
+        setFormError("Username, email, and password are required");
+        return;
+      }
+      if (formData.password !== formData.password_confirm) {
+        setFormError("Passwords do not match");
+        return;
+      }
+      try {
+        setFormLoading(true);
+        const newUser = await createUser({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          password_confirm: formData.password_confirm,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          role: formData.role,
+        });
+        setUsers([...users, newUser]);
+        handleCloseModal();
+      } catch (err: any) {
+        const data = err?.response?.data;
+        const message =
+          typeof data === "object"
+            ? Object.values(data).flat().join(" ")
+            : data?.detail || err?.message || "Failed to create user";
+        setFormError(message);
+      } finally {
+        setFormLoading(false);
+      }
+    } else {
+      // Edit mode
+      if (formData.password && formData.password !== formData.password_confirm) {
+        setFormError("Passwords do not match");
+        return;
+      }
+      try {
+        setFormLoading(true);
+        const payload: Record<string, any> = {
+          username: formData.username,
+          email: formData.email,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          role: formData.role,
+          is_active: formData.is_active,
+        };
+        if (formData.password) {
+          payload.password = formData.password;
+        }
+        const updated = await updateUser(selectedUser!.id as number, payload);
+        setUsers(users.map((u) => (u.id === updated.id ? updated : u)));
+        handleCloseModal();
+      } catch (err: any) {
+        const data = err?.response?.data;
+        const message =
+          typeof data === "object"
+            ? Object.values(data).flat().join(" ")
+            : data?.detail || err?.message || "Failed to update user";
+        setFormError(message);
+      } finally {
+        setFormLoading(false);
+      }
     }
   };
 
   if (error && !user) {
     return (
       <div className="p-6">
-        <div className="p-4 bg-red-100 text-red-800 rounded">
-          {error}
-        </div>
+        <div className="p-4 bg-red-100 text-red-800 rounded">{error}</div>
       </div>
     );
   }
@@ -163,11 +224,9 @@ export default function AdminUsersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-          <p className="text-muted-foreground">
-            Manage user accounts and roles
-          </p>
+          <p className="text-muted-foreground">Manage user accounts and roles</p>
         </div>
-        <Button onClick={handleOpenModal}>
+        <Button onClick={handleOpenCreate}>
           <Plus className="mr-2 h-4 w-4" />
           Add User
         </Button>
@@ -203,9 +262,7 @@ export default function AdminUsersPage() {
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-12">
               <p className="text-red-600 mb-4">{error}</p>
-              <Button variant="outline" onClick={fetchUsers}>
-                Retry
-              </Button>
+              <Button variant="outline" onClick={fetchUsers}>Retry</Button>
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
@@ -228,9 +285,7 @@ export default function AdminUsersPage() {
                 <tbody>
                   {filteredUsers.map((u) => (
                     <tr key={u.id} className="border-b hover:bg-muted/50">
-                      <td className="py-3 pr-4 font-medium">
-                        {u.first_name} {u.last_name}
-                      </td>
+                      <td className="py-3 pr-4 font-medium">{u.first_name} {u.last_name}</td>
                       <td className="py-3 pr-4 text-muted-foreground">{u.email}</td>
                       <td className="py-3 pr-4 text-muted-foreground">{u.username}</td>
                       <td className="py-3 pr-4">
@@ -248,10 +303,7 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="py-3 flex gap-2">
                         <button
-                          onClick={() => {
-                            setSelectedUser(u);
-                            setShowModal(true);
-                          }}
+                          onClick={() => handleOpenEdit(u)}
                           className="p-1 hover:bg-muted rounded"
                           title="Edit user"
                         >
@@ -279,16 +331,13 @@ export default function AdminUsersPage() {
         </CardContent>
       </Card>
 
-      {/* Create User Modal */}
+      {/* Create / Edit User Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{selectedUser ? "Edit User" : "Create New User"}</CardTitle>
-              <button
-                onClick={handleCloseModal}
-                className="p-1 hover:bg-muted rounded"
-              >
+              <CardTitle>{formMode === "edit" ? "Edit User" : "Add New User"}</CardTitle>
+              <button onClick={handleCloseModal} className="p-1 hover:bg-muted rounded">
                 <X className="h-4 w-4" />
               </button>
             </CardHeader>
@@ -321,25 +370,27 @@ export default function AdminUsersPage() {
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">First Name</label>
-                  <input
-                    type="text"
-                    name="first_name"
-                    value={formData.first_name}
-                    onChange={handleFormChange}
-                    className="w-full px-3 py-2 border rounded-md bg-background"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Last Name</label>
-                  <input
-                    type="text"
-                    name="last_name"
-                    value={formData.last_name}
-                    onChange={handleFormChange}
-                    className="w-full px-3 py-2 border rounded-md bg-background"
-                  />
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">First Name</label>
+                    <input
+                      type="text"
+                      name="first_name"
+                      value={formData.first_name}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2 border rounded-md bg-background"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">Last Name</label>
+                    <input
+                      type="text"
+                      name="last_name"
+                      value={formData.last_name}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2 border rounded-md bg-background"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Role</label>
@@ -356,15 +407,33 @@ export default function AdminUsersPage() {
                     ))}
                   </select>
                 </div>
+                {formMode === "edit" && (
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="is_active"
+                      name="is_active"
+                      checked={formData.is_active}
+                      onChange={handleFormChange}
+                      className="h-4 w-4 rounded border"
+                    />
+                    <label htmlFor="is_active" className="text-sm font-medium">
+                      Active account
+                    </label>
+                  </div>
+                )}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Password</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Password{formMode === "edit" && <span className="text-muted-foreground font-normal"> (leave blank to keep unchanged)</span>}
+                  </label>
                   <input
                     type="password"
                     name="password"
                     value={formData.password}
                     onChange={handleFormChange}
                     className="w-full px-3 py-2 border rounded-md bg-background"
-                    required
+                    required={formMode === "create"}
+                    placeholder={formMode === "edit" ? "••••••••" : ""}
                   />
                 </div>
                 <div>
@@ -375,7 +444,8 @@ export default function AdminUsersPage() {
                     value={formData.password_confirm}
                     onChange={handleFormChange}
                     className="w-full px-3 py-2 border rounded-md bg-background"
-                    required
+                    required={formMode === "create"}
+                    placeholder={formMode === "edit" ? "••••••••" : ""}
                   />
                 </div>
                 <div className="flex gap-2 pt-4">
@@ -388,16 +458,14 @@ export default function AdminUsersPage() {
                   >
                     Cancel
                   </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1"
-                    disabled={formLoading}
-                  >
+                  <Button type="submit" className="flex-1" disabled={formLoading}>
                     {formLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
+                        {formMode === "edit" ? "Saving..." : "Creating..."}
                       </>
+                    ) : formMode === "edit" ? (
+                      "Save Changes"
                     ) : (
                       "Create User"
                     )}
