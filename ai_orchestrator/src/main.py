@@ -48,12 +48,12 @@ async def health_check():
     }
 
 
-# ── Placeholder Router Includes ─────────────────────────────────────────────
+# ── Router Includes ──────────────────────────────────────────────────────────
 
-# from src.routers import agents, research, stream
-# app.include_router(agents.router, prefix="/ai/agents", tags=["agents"])
-# app.include_router(research.router, prefix="/ai/research", tags=["research"])
-# app.include_router(stream.router, prefix="/ai/stream", tags=["stream"])
+from src.routers import agents, research, stream
 
-# TODO: Uncomment router includes once route modules are implemented
-logger.info("Placeholder routes registered: /ai/agents, /ai/research, /ai/stream")
+app.include_router(agents.router, prefix="", tags=["agents"])
+app.include_router(research.router, prefix="", tags=["research"])
+app.include_router(stream.router, prefix="", tags=["stream"])
+
+logger.info("Routes registered: /ai/agents, /ai/research, /ai/stream")
