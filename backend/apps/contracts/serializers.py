@@ -72,6 +72,9 @@ class ContractListSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(
         source="get_status_display", read_only=True
     )
+    contract_type_display = serializers.CharField(
+        source="get_contract_type_display", read_only=True
+    )
 
     class Meta:
         model = Contract
@@ -81,13 +84,11 @@ class ContractListSerializer(serializers.ModelSerializer):
             "title",
             "contract_number",
             "contract_type",
+            "contract_type_display",
             "status",
             "status_display",
-            "effective_date",
-            "expiration_date",
+            "executed_date",
             "total_value",
-            "legal_review_status",
-            "legal_risk_score",
             "created_at",
             "updated_at",
         ]
@@ -95,9 +96,12 @@ class ContractListSerializer(serializers.ModelSerializer):
 
 
 class ContractDetailSerializer(serializers.ModelSerializer):
-    """Full detail serializer including content and legal notes."""
+    """Full detail serializer including contract details."""
     status_display = serializers.CharField(
         source="get_status_display", read_only=True
+    )
+    contract_type_display = serializers.CharField(
+        source="get_contract_type_display", read_only=True
     )
     version_count = serializers.SerializerMethodField()
 
@@ -110,15 +114,19 @@ class ContractDetailSerializer(serializers.ModelSerializer):
             "title",
             "contract_number",
             "contract_type",
+            "contract_type_display",
             "status",
             "status_display",
-            "content",
-            "effective_date",
-            "expiration_date",
             "total_value",
-            "legal_review_status",
-            "legal_risk_score",
-            "legal_notes",
+            "period_of_performance_start",
+            "period_of_performance_end",
+            "option_years",
+            "contracting_officer",
+            "contracting_officer_email",
+            "cor_name",
+            "awarded_date",
+            "executed_date",
+            "notes",
             "version_count",
             "created_at",
             "updated_at",

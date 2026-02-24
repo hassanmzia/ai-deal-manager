@@ -43,9 +43,9 @@ class ContractViewSet(viewsets.ModelViewSet):
     queryset = Contract.objects.select_related("deal", "template").all()
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["deal", "status", "contract_type", "legal_review_status"]
+    filterset_fields = ["deal", "status", "contract_type"]
     search_fields = ["title", "contract_number"]
-    ordering_fields = ["title", "status", "total_value", "effective_date", "created_at"]
+    ordering_fields = ["title", "status", "total_value", "executed_date", "created_at"]
 
     def get_serializer_class(self):
         if self.action == "list":
