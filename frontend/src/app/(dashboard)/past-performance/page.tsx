@@ -647,8 +647,8 @@ export default function PastPerformancePage() {
     ? records.filter((r) => r.domains.some((d) => d.toLowerCase().includes(domainFilter.toLowerCase())))
     : records;
 
-  const uniqueAgencies = [...new Set(records.map((r) => r.client_agency).filter(Boolean))].sort();
-  const allDomains = [...new Set(records.flatMap((r) => r.domains))].sort();
+  const uniqueAgencies = Array.from(new Set(records.map((r) => r.client_agency).filter(Boolean))).sort();
+  const allDomains = Array.from(new Set(records.flatMap((r) => r.domains))).sort();
 
   // Summary stats
   const totalValue = records.reduce((s, r) => {
