@@ -4,6 +4,7 @@ from rest_framework.generics import (
     CreateAPIView,
     ListAPIView,
     ListCreateAPIView,
+    RetrieveUpdateDestroyAPIView,
     RetrieveUpdateAPIView,
     UpdateAPIView,
 )
@@ -69,7 +70,7 @@ class UserListView(ListCreateAPIView):
         return UserSerializer
 
 
-class UserAdminDetailView(RetrieveUpdateAPIView):
+class UserAdminDetailView(RetrieveUpdateDestroyAPIView):
     """Retrieve or update a specific user by ID (admin only)."""
 
     queryset = User.objects.all()

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/auth";
-import { getUsers, createUser, updateUser, User } from "@/services/users";
+import { getUsers, createUser, updateUser, deleteUser, User } from "@/services/users";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, Edit2, Trash2, Search, X } from "lucide-react";
@@ -55,6 +55,7 @@ export default function AdminUsersPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
+  const [deletingId, setDeletingId] = useState<string | number | null>(null);
 
   useEffect(() => {
     if (user && user.role !== "admin") {
@@ -129,6 +130,24 @@ export default function AdminUsersPage() {
     setShowModal(false);
     setSelectedUser(null);
     setFormError(null);
+  };
+
+  const handleDelete = async (u: User) => {
+    if (!confirm(`Delete user "${u.username}"? This cannot be undone.`)) return;
+    setDeletingId(u.id);
+    try {
+      await deleteUser(u.id);
+      setUsers((prev) => prev.filter((x) => x.id !== u.id));
+    } catch (err: any) {
+      const data = err?.response?.data;
+      const message =
+        typeof data === "object"
+          ? Object.values(data).flat().join(" ")
+          : data?.detail || err?.message || "Failed to delete user";
+      alert(message);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -310,16 +329,14 @@ export default function AdminUsersPage() {
                           <Edit2 className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            if (confirm(`Delete user ${u.username}?`)) {
-                              // TODO: Implement delete functionality
-                              console.log("Delete user", u.id);
-                            }
-                          }}
-                          className="p-1 hover:bg-muted rounded text-red-600"
+                          onClick={() => handleDelete(u)}
+                          disabled={deletingId === u.id}
+                          className="p-1 hover:bg-muted rounded text-red-600 disabled:opacity-40"
                           title="Delete user"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {deletingId === u.id
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <Trash2 className="h-4 w-4" />}
                         </button>
                       </td>
                     </tr>
