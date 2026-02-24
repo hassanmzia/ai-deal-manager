@@ -16,8 +16,9 @@
 4. [Phase 2 — Opportunity Intelligence](#4-phase-2--opportunity-intelligence)
 5. [Phase 3 — Deal Pipeline & Workflow](#5-phase-3--deal-pipeline--workflow)
 6. [Phase 4 — RFP Workspace & Compliance](#6-phase-4--rfp-workspace--compliance)
+6A. [Phase 4A — Company AI Strategy Agent](#6a-phase-4a--company-ai-strategy-agent) **(NEW)**
 7. [Phase 5 — Past Performance Vault](#7-phase-5--past-performance-vault)
-8. [Phase 6 — Proposal Authoring Studio](#8-phase-6--proposal-authoring-studio)
+8. [Phase 6 — Proposal Authoring Studio](#8-phase-6--proposal-authoring-studio) (includes **Fully Autonomous AI Solutions Architect** + **Multimodal Knowledge Vault**)
 9. [Phase 7 — Pricing & Staffing Engine](#9-phase-7--pricing--staffing-engine)
 10. [Phase 8 — Contract Management](#10-phase-8--contract-management)
 11. [Phase 9 — AI Agent Orchestration](#11-phase-9--ai-agent-orchestration)
@@ -483,6 +484,230 @@ class ComplianceMatrixItem(models.Model):
 
 ---
 
+## 6A. Phase 4A — Company AI Strategy Agent
+
+> **Purpose:** A strategic intelligence layer that sits ABOVE the deal pipeline. It maintains your company's evolving strategy, influences every bid/no-bid decision, balances the portfolio, and ensures the entire platform optimizes toward your business goals — not just individual deal fit.
+
+### 6A.1 Strategic Knowledge Base
+
+```python
+class CompanyStrategy(models.Model):
+    """Living strategic plan maintained by strategy agent + leadership"""
+    version = models.IntegerField()
+    effective_date = models.DateField()
+
+    # Strategic positioning
+    mission_statement = models.TextField()
+    vision_3_year = models.TextField()
+    target_revenue = models.DecimalField(max_digits=15, decimal_places=2)
+    target_win_rate = models.FloatField()
+    target_margin = models.FloatField()
+
+    # Market focus
+    target_agencies = models.JSONField(default=list)        # ["DoD", "DHS", "DOE", "HHS"]
+    target_domains = models.JSONField(default=list)         # ["AI/ML", "Cloud", "Cyber", "Data"]
+    target_naics_codes = models.JSONField(default=list)
+    growth_markets = models.JSONField(default=list)         # Markets to BREAK INTO
+    mature_markets = models.JSONField(default=list)         # Markets to DEFEND
+    exit_markets = models.JSONField(default=list)           # Markets to phase out
+
+    # Competitive strategy
+    differentiators = models.JSONField(default=list)        # Key competitive advantages
+    win_themes = models.JSONField(default=list)             # Reusable win themes
+    pricing_philosophy = models.TextField()                 # Aggressive, value-based, etc.
+    teaming_strategy = models.TextField()                   # Prime vs sub, preferred partners
+
+    # Capacity constraints
+    max_concurrent_proposals = models.IntegerField(default=5)
+    available_key_personnel = models.JSONField(default=list)
+    clearance_capacity = models.JSONField(default=dict)     # TS/SCI slots, Secret, etc.
+
+    # Embedding for semantic matching
+    strategy_embedding = VectorField(dimensions=1536)
+
+class StrategicGoal(models.Model):
+    """Quantified strategic objectives that drive agent behavior"""
+    strategy = models.ForeignKey(CompanyStrategy, on_delete=models.CASCADE)
+    name = models.CharField(max_length=200)
+    category = models.CharField(choices=[
+        ('revenue', 'Revenue Growth'),
+        ('market_entry', 'New Market Entry'),
+        ('market_share', 'Market Share Defense'),
+        ('capability', 'Capability Building'),
+        ('relationship', 'Client Relationship'),
+        ('portfolio', 'Portfolio Balance'),
+        ('profitability', 'Profitability'),
+    ])
+    metric = models.CharField(max_length=100)
+    current_value = models.FloatField()
+    target_value = models.FloatField()
+    deadline = models.DateField()
+    weight = models.FloatField(default=1.0)    # Priority among goals
+    status = models.CharField(choices=[('on_track','On Track'),('at_risk','At Risk'),('behind','Behind')])
+
+class PortfolioSnapshot(models.Model):
+    """Periodic snapshot of pipeline portfolio health"""
+    snapshot_date = models.DateField()
+    active_deals = models.IntegerField()
+    total_pipeline_value = models.DecimalField(max_digits=15, decimal_places=2)
+    weighted_pipeline = models.DecimalField(max_digits=15, decimal_places=2)
+    deals_by_agency = models.JSONField()
+    deals_by_domain = models.JSONField()
+    deals_by_stage = models.JSONField()
+    deals_by_size = models.JSONField()
+    capacity_utilization = models.FloatField()     # % of available team engaged
+    concentration_risk = models.JSONField()         # Over-reliance on single client/domain
+    strategic_alignment_score = models.FloatField() # Overall portfolio-strategy fit
+    ai_recommendations = models.JSONField()         # Strategy agent's recommended actions
+```
+
+### 6A.2 Strategy Agent Capabilities
+
+```python
+class StrategyAgent:
+    """
+    Company AI Strategy Agent — the strategic brain of the platform.
+    Influences EVERY bid decision and shapes the entire pipeline.
+    """
+
+    # ── Strategic Scoring (runs on every opportunity) ──────────────
+    def compute_strategic_score(self, opportunity, strategy) -> StrategicScore:
+        """
+        Score an opportunity against the company strategy.
+        This score ADDS to the technical fit score to create
+        a composite 'pursue score'.
+
+        Factors:
+        - Agency alignment (is this a target agency?)
+        - Domain alignment (does this grow a target capability?)
+        - Growth market bonus (extra weight for break-in markets)
+        - Portfolio balance (do we need more deals in this area?)
+        - Revenue target contribution (deal size vs remaining target)
+        - Capacity fit (do we have people for this?)
+        - Strategic relationship value (gateway deal for bigger wins?)
+        - Competitive positioning (can we differentiate here?)
+        """
+
+    # ── Bid/No-Bid Influence ───────────────────────────────────────
+    def generate_bid_recommendation(self, deal, strategy) -> BidRecommendation:
+        """
+        Generates a strategic bid/no-bid recommendation
+        that's presented alongside the fit score at the HITL gate.
+
+        Returns:
+        - recommendation: BID / NO-BID / CONDITIONAL_BID
+        - strategic_rationale: "This deal opens DoD AI market..."
+        - opportunity_cost: "Bidding this blocks 2 other pursuits..."
+        - portfolio_impact: "Improves agency diversification by 15%..."
+        - resource_impact: "Requires 3 key personnel for 4 months..."
+        - risk_assessment: strategic risks of bidding / not bidding
+        """
+
+    # ── Portfolio Optimization ─────────────────────────────────────
+    def analyze_portfolio(self, all_active_deals, strategy) -> PortfolioAnalysis:
+        """
+        Weekly analysis of the entire pipeline against strategy.
+
+        Outputs:
+        - Portfolio balance scorecard (by agency, domain, size, stage)
+        - Concentration risk warnings
+        - Gap analysis (target areas with no active pursuits)
+        - Capacity forecast (team utilization by month)
+        - Revenue projection vs target
+        - Recommended actions (pursue more in X, deprioritize Y)
+        """
+
+    # ── Win Theme Generation ───────────────────────────────────────
+    def generate_win_themes(self, deal, strategy) -> list[WinTheme]:
+        """
+        Generate deal-specific win themes aligned with company strategy.
+        These flow into proposal writing and pricing positioning.
+        """
+
+    # ── Competitive Intelligence ───────────────────────────────────
+    def assess_competitive_landscape(self, opportunity) -> CompetitiveAssessment:
+        """
+        Analyze likely competitors, incumbent advantages,
+        and recommend positioning strategy.
+        Uses historical data from won/lost deals + public info.
+        """
+
+    # ── Strategy Evolution ─────────────────────────────────────────
+    def recommend_strategy_updates(self, outcomes, portfolio) -> list[StrategyUpdate]:
+        """
+        Based on win/loss patterns, market trends, and portfolio
+        performance, recommend updates to the company strategy.
+        Presented to executives at HITL gate (quarterly review).
+        """
+```
+
+### 6A.3 Strategy Agent Integration Points
+
+```
+Every Bid/No-Bid Gate:
+  ┌─────────────────────┐
+  │ Technical Fit Score  │ ← Opportunity Scout
+  │ Strategic Score      │ ← Strategy Agent
+  │ Composite Score      │ ← Weighted combination
+  │ Bid Recommendation   │ ← Strategy Agent
+  │ Portfolio Impact     │ ← Strategy Agent
+  │ Resource Availability│ ← Strategy Agent
+  └──────────┬──────────┘
+             │
+        [HITL GATE]
+        Human decides
+             │
+  ┌──────────┴──────────┐
+  │ Decision + rationale │
+  │ → feeds back to      │
+  │   strategy learning  │
+  └─────────────────────┘
+
+Weekly Portfolio Review (automated):
+  Strategy Agent → Portfolio Analysis → Dashboard
+  → Alerts if portfolio drifts from strategy
+  → Recommends opportunity hunting priorities
+
+Quarterly Strategy Review (HITL):
+  Strategy Agent → Strategy Update Recommendations
+  → Executive review + approval
+  → Updated strategy → influences all future scoring
+```
+
+### 6A.4 LangGraph Strategy Graph
+
+```python
+class StrategyGraphState(TypedDict):
+    opportunity: dict
+    company_strategy: dict
+    active_portfolio: list
+    team_capacity: dict
+    historical_outcomes: list
+    strategic_score: float
+    bid_recommendation: dict
+    win_themes: list
+    competitive_assessment: dict
+
+strategy_graph = StateGraph(StrategyGraphState)
+strategy_graph.add_node("load_strategy", load_current_strategy)
+strategy_graph.add_node("assess_alignment", assess_strategic_alignment)
+strategy_graph.add_node("analyze_portfolio_impact", analyze_portfolio_impact)
+strategy_graph.add_node("check_capacity", check_resource_capacity)
+strategy_graph.add_node("assess_competition", assess_competitive_landscape)
+strategy_graph.add_node("generate_recommendation", generate_bid_recommendation)
+strategy_graph.add_node("generate_win_themes", generate_win_themes)
+
+strategy_graph.add_edge("load_strategy", "assess_alignment")
+strategy_graph.add_edge("assess_alignment", "analyze_portfolio_impact")
+strategy_graph.add_edge("analyze_portfolio_impact", "check_capacity")
+strategy_graph.add_edge("check_capacity", "assess_competition")
+strategy_graph.add_edge("assess_competition", "generate_recommendation")
+strategy_graph.add_edge("generate_recommendation", "generate_win_themes")
+strategy_graph.add_edge("generate_win_themes", END)
+```
+
+---
+
 ## 7. Phase 5 — Past Performance Vault
 
 ### 7.1 Past Performance Data Model
@@ -553,16 +778,543 @@ For each section, the AI:
 6. Flags areas needing human input
 7. Generates architectural diagrams descriptions (for solution sections)
 
-### 8.3 Solution Architect Agent
+### 8.3 Fully Autonomous AI Solutions Architect
 
-- Reads technical requirements
-- Generates AI/ML architecture proposals:
-  - System architecture diagrams (described in structured format)
-  - Technology stack recommendations
-  - Integration approach
-  - Security architecture
-  - Scalability plan
-  - Innovation elements (LLM, agents, RAG, etc.)
+> **This is the crown jewel of the platform.** A multimodal, RAG-powered, fully autonomous Solutions Architect agent that can produce complete, professional, real-world technical solutions for any proposal or RFP. It uses YOUR knowledge base — your reference architectures, best practices, technical documents, images, diagrams, and design patterns — combined with generative AI to produce proposal-ready technical volumes.
+
+#### 8.3.1 Multimodal Knowledge Vault
+
+The SA agent is powered by a comprehensive knowledge vault that you populate with everything your solutions team knows:
+
+```python
+class KnowledgeVault(models.Model):
+    """
+    Central multimodal knowledge repository.
+    Upload EVERYTHING: reference architectures, whitepapers, technical docs,
+    architecture diagrams (images), design patterns, best practices,
+    framework comparisons, security standards, compliance guides, etc.
+    """
+    title = models.CharField(max_length=500)
+    category = models.CharField(choices=[
+        ('reference_architecture', 'Reference Architecture'),
+        ('design_pattern', 'Design Pattern'),
+        ('best_practice', 'Best Practice / Standard'),
+        ('technical_whitepaper', 'Technical Whitepaper'),
+        ('framework_guide', 'Framework / Library Guide'),
+        ('architecture_diagram', 'Architecture Diagram (Image)'),
+        ('solution_template', 'Solution Template'),
+        ('security_standard', 'Security Standard / Framework'),
+        ('compliance_guide', 'Compliance / Regulatory Guide'),
+        ('case_study', 'Case Study / Lessons Learned'),
+        ('technology_comparison', 'Technology Comparison'),
+        ('infrastructure_pattern', 'Infrastructure / Cloud Pattern'),
+        ('ai_ml_pattern', 'AI/ML Architecture Pattern'),
+        ('agentic_pattern', 'Agentic AI Design Pattern'),
+        ('integration_pattern', 'Integration / API Pattern'),
+        ('data_architecture', 'Data Architecture Pattern'),
+        ('devops_pattern', 'DevOps / CI-CD Pattern'),
+        ('pricing_reference', 'Pricing / Estimation Reference'),
+        ('proposal_example', 'Past Winning Proposal Section'),
+        ('other', 'Other Knowledge Document'),
+    ])
+
+    # Content — supports multimodal
+    content_type = models.CharField(choices=[
+        ('document', 'Document (PDF/DOCX/MD)'),
+        ('image', 'Image (PNG/JPG/SVG/Visio)'),
+        ('diagram', 'Architecture Diagram'),
+        ('spreadsheet', 'Spreadsheet (Excel/CSV)'),
+        ('presentation', 'Presentation (PPTX)'),
+        ('code', 'Code Sample / Repository'),
+        ('url', 'External URL / Reference'),
+    ])
+    file = models.FileField(upload_to='knowledge_vault/', null=True)
+    raw_text = models.TextField(blank=True)                 # Extracted text
+    image_description = models.TextField(blank=True)        # AI-generated description of images/diagrams
+
+    # Metadata
+    technology_tags = models.JSONField(default=list)        # ["LangGraph", "Kubernetes", "RAG"]
+    domain_tags = models.JSONField(default=list)            # ["Healthcare", "Defense", "Finance"]
+    applicable_naics = models.JSONField(default=list)
+    author = models.CharField(max_length=255, blank=True)
+    source = models.CharField(max_length=500, blank=True)
+    date_created = models.DateField(null=True)
+    quality_score = models.FloatField(default=0.0)          # Usage-weighted quality
+    usage_count = models.IntegerField(default=0)            # How often retrieved
+
+    # Vector embeddings (multiple per document for chunked retrieval)
+    # Stored in KnowledgeChunk model below
+
+class KnowledgeChunk(models.Model):
+    """
+    Chunked + embedded pieces of knowledge vault items.
+    Supports text AND image embeddings for multimodal RAG.
+    """
+    vault_item = models.ForeignKey(KnowledgeVault, on_delete=models.CASCADE, related_name='chunks')
+    chunk_index = models.IntegerField()
+    chunk_type = models.CharField(choices=[
+        ('text', 'Text Chunk'),
+        ('image', 'Image / Diagram'),
+        ('table', 'Table / Structured Data'),
+        ('code', 'Code Block'),
+    ])
+    content = models.TextField()                            # Text content or image description
+    image_file = models.FileField(null=True, blank=True)    # Original image if chunk_type=image
+    embedding = VectorField(dimensions=1536)                # Text embedding (OpenAI/Anthropic)
+    image_embedding = VectorField(dimensions=512, null=True) # CLIP embedding for images
+    metadata = models.JSONField(default=dict)               # Section headers, page numbers, etc.
+```
+
+#### 8.3.2 Solutioning Frameworks Library
+
+The SA agent uses established architecture frameworks and solutioning methodologies:
+
+```python
+SOLUTIONING_FRAMEWORKS = {
+    # ── Enterprise Architecture Frameworks ─────────────────
+    "togaf": {
+        "name": "TOGAF Architecture Development Method",
+        "phases": ["Architecture Vision", "Business Architecture",
+                   "Information Systems Architecture", "Technology Architecture",
+                   "Opportunities & Solutions", "Migration Planning"],
+        "artifacts": ["Architecture Building Blocks", "Solution Building Blocks",
+                      "Architecture Roadmap", "Transition Architectures"],
+    },
+    "zachman": {
+        "name": "Zachman Framework",
+        "dimensions": ["What (Data)", "How (Function)", "Where (Network)",
+                       "Who (People)", "When (Time)", "Why (Motivation)"],
+        "perspectives": ["Executive", "Business Mgmt", "Architect",
+                         "Engineer", "Technician", "Enterprise"],
+    },
+
+    # ── Solution Architecture Patterns ─────────────────────
+    "c4_model": {
+        "name": "C4 Model (Context, Container, Component, Code)",
+        "levels": [
+            "L1: System Context — shows system boundaries + external actors",
+            "L2: Container — shows major deployable units (APIs, DBs, UIs)",
+            "L3: Component — shows internal structure of each container",
+            "L4: Code — class/module level (only for critical sections)",
+        ],
+    },
+    "arc42": {
+        "name": "arc42 Architecture Documentation",
+        "sections": ["Introduction & Goals", "Constraints", "Context & Scope",
+                     "Solution Strategy", "Building Block View", "Runtime View",
+                     "Deployment View", "Crosscutting Concepts", "Architecture Decisions",
+                     "Quality Requirements", "Risks & Technical Debt"],
+    },
+
+    # ── Cloud Well-Architected Frameworks ──────────────────
+    "aws_well_architected": {
+        "pillars": ["Operational Excellence", "Security", "Reliability",
+                    "Performance Efficiency", "Cost Optimization", "Sustainability"],
+    },
+    "azure_well_architected": {
+        "pillars": ["Reliability", "Security", "Cost Optimization",
+                    "Operational Excellence", "Performance Efficiency"],
+    },
+
+    # ── AI/ML Specific Patterns ────────────────────────────
+    "ml_ops": {
+        "name": "MLOps Maturity Model",
+        "levels": ["L0: No MLOps", "L1: DevOps only", "L2: ML Training Pipeline",
+                   "L3: ML Deployment Pipeline", "L4: Full MLOps Automation"],
+        "components": ["Data Pipeline", "Feature Store", "Model Training",
+                       "Model Registry", "Model Serving", "Monitoring", "Retraining"],
+    },
+    "agentic_ai_patterns": {
+        "name": "Agentic AI Architecture Patterns",
+        "patterns": [
+            "Single Agent + Tools (ReAct)",
+            "Multi-Agent Orchestration (LangGraph)",
+            "Hierarchical Agent Teams (Supervisor + Workers)",
+            "Agent-to-Agent Protocol (A2A)",
+            "Human-in-the-Loop Interrupts",
+            "Reflection / Self-Critique Loops",
+            "Planning Agent (Plan-and-Execute)",
+            "RAG Agent (Retrieve-Augment-Generate)",
+            "Code Generation Agent",
+            "Multi-Modal Agent (Vision + Text + Code)",
+            "Tool-Use Agent (MCP Servers)",
+            "Memory-Augmented Agent (Short + Long Term)",
+        ],
+    },
+    "rag_patterns": {
+        "name": "RAG Architecture Patterns",
+        "patterns": [
+            "Naive RAG (embed → retrieve → generate)",
+            "Advanced RAG (query rewriting, HyDE, reranking)",
+            "Modular RAG (plug-and-play components)",
+            "Graph RAG (knowledge graph + vector search)",
+            "Agentic RAG (agent decides when/what to retrieve)",
+            "Multi-Modal RAG (text + image + table retrieval)",
+            "Corrective RAG (CRAG — self-correcting retrieval)",
+            "Self-RAG (retrieval-augmented with self-reflection)",
+        ],
+    },
+
+    # ── Integration Patterns ───────────────────────────────
+    "integration_patterns": {
+        "patterns": ["API Gateway", "Event-Driven (Pub/Sub)", "CQRS",
+                     "Saga Pattern", "Circuit Breaker", "Sidecar",
+                     "Service Mesh", "BFF (Backend for Frontend)"],
+    },
+
+    # ── Security Frameworks ────────────────────────────────
+    "security_frameworks": {
+        "patterns": ["Zero Trust Architecture", "NIST 800-53",
+                     "FedRAMP", "FISMA", "CMMC", "SOC 2",
+                     "Defense in Depth", "Least Privilege"],
+    },
+}
+```
+
+#### 8.3.3 Solution Architect Agent — Full Design
+
+```python
+class SolutionArchitectAgent:
+    """
+    FULLY AUTONOMOUS AI Solutions Architect.
+
+    Given an RFP/opportunity, this agent produces a COMPLETE technical solution
+    including architecture, diagrams, technology recommendations, integration
+    design, security approach, staffing, and risk mitigation — all drawn from
+    YOUR multimodal knowledge vault + generative AI.
+
+    This is NOT a summarizer. It is a real solution architect that:
+    1. Analyzes requirements deeply (functional, non-functional, constraints)
+    2. Retrieves relevant knowledge (reference architectures, patterns, past solutions)
+    3. Synthesizes a novel solution tailored to the specific RFP
+    4. Generates actual architecture diagrams (using Mermaid/D2/PlantUML + images)
+    5. Produces full technical volume sections ready for proposal insertion
+    """
+
+    # ── Phase 1: Requirement Deep Dive ─────────────────────
+    def analyze_requirements(self, rfp_requirements, compliance_matrix) -> RequirementAnalysis:
+        """
+        Deep analysis of ALL RFP requirements:
+        - Functional requirements (what the system must do)
+        - Non-functional requirements (performance, scalability, availability, security)
+        - Technical constraints (language, platform, certifications, clearances)
+        - Integration requirements (existing systems, APIs, data sources)
+        - Data requirements (volumes, sensitivity, retention)
+        - AI/ML specific requirements (model accuracy, explainability, bias)
+        - Compliance requirements (FedRAMP, FISMA, 508, NIST, CMMC)
+        - Delivery constraints (timeline, phasing, milestones)
+
+        Outputs a structured RequirementAnalysis with:
+        - Categorized requirements
+        - Complexity assessment per area
+        - Risk flags (conflicting requirements, impossible constraints)
+        - Key design decisions that need to be made
+        """
+
+    # ── Phase 2: Knowledge Retrieval (Multimodal RAG) ──────
+    def retrieve_relevant_knowledge(self, requirement_analysis) -> KnowledgeBundle:
+        """
+        Multimodal RAG retrieval from your Knowledge Vault:
+
+        1. Text retrieval:
+           - Query: each requirement cluster → vector search → top-k chunks
+           - Reranking: cross-encoder reranking for precision
+           - Sources: reference architectures, best practices, past solutions
+
+        2. Image/Diagram retrieval:
+           - Query: requirement descriptions → CLIP embeddings → similar diagrams
+           - Returns: relevant architecture diagrams, infrastructure patterns
+           - AI describes each image for context injection
+
+        3. Code/Template retrieval:
+           - Query: technology stack requirements → matching code samples
+           - Returns: implementation patterns, config templates
+
+        4. Past Solution retrieval:
+           - Query: similar past winning proposals' technical sections
+           - Returns: proven solution approaches from your vault
+
+        Returns KnowledgeBundle with all retrieved artifacts organized by topic.
+        """
+
+    # ── Phase 3: Solution Synthesis ────────────────────────
+    def synthesize_solution(self, requirements, knowledge, strategy_context) -> TechnicalSolution:
+        """
+        The core solutioning engine. Uses retrieved knowledge + generative AI
+        to produce a NOVEL, TAILORED solution.
+
+        Uses selected solutioning frameworks (C4, TOGAF, arc42, etc.) based
+        on the RFP's expectations and evaluation criteria.
+
+        Generates:
+        1. Solution Overview & Vision
+        2. Architecture Approach (which framework, which patterns)
+        3. System Context (C4 L1 — external actors, system boundaries)
+        4. Container Architecture (C4 L2 — services, databases, APIs)
+        5. Component Design (C4 L3 — internal structure of key containers)
+        6. Technology Stack Selection (with justification per choice)
+        7. Data Architecture (data flow, storage, ETL, analytics)
+        8. AI/ML Architecture (if applicable — models, training, serving)
+        9. Agentic Architecture (if applicable — agents, tools, orchestration)
+        10. Integration Architecture (APIs, events, external systems)
+        11. Security Architecture (Zero Trust, encryption, IAM, compliance)
+        12. Infrastructure & Deployment (cloud, containers, CI/CD)
+        13. Scalability & Performance Design
+        14. Disaster Recovery & Business Continuity
+        15. Migration & Transition Plan (if replacing existing system)
+        16. Innovation Elements (differentiators, novel approaches)
+        17. Risk Register with Mitigations
+        """
+
+    # ── Phase 4: Diagram Generation ────────────────────────
+    def generate_diagrams(self, solution) -> list[ArchitectureDiagram]:
+        """
+        Generates ACTUAL architecture diagrams — not just descriptions.
+
+        Methods (in priority order):
+        1. Mermaid.js diagrams (rendered to SVG/PNG)
+           - System context, container, sequence, flowcharts
+        2. D2 diagrams (for more complex architectural views)
+           - Infrastructure, network, deployment views
+        3. PlantUML (for UML-specific needs)
+           - Component, class, activity, state diagrams
+        4. AI Image Generation (for custom visuals)
+           - Generates prompt → renders via image model
+           - For high-level conceptual diagrams
+        5. Template-based (from Knowledge Vault)
+           - Retrieves similar diagrams from vault
+           - Modifies/annotates for current solution
+
+        Standard diagram set per proposal:
+        ┌─────────────────────────────────────────────────────────┐
+        │ 1.  Solution Overview Diagram (conceptual)             │
+        │ 2.  System Context Diagram (C4 L1)                     │
+        │ 3.  Container Architecture Diagram (C4 L2)             │
+        │ 4.  Component Diagrams (C4 L3, for 2-3 key services)   │
+        │ 5.  Data Flow Diagram                                  │
+        │ 6.  AI/ML Pipeline Architecture (if applicable)        │
+        │ 7.  Agentic System Architecture (if applicable)        │
+        │ 8.  Security Architecture Diagram                      │
+        │ 9.  Infrastructure / Deployment Diagram                │
+        │ 10. Integration / API Architecture Diagram             │
+        │ 11. Network Topology Diagram                           │
+        │ 12. CI/CD Pipeline Diagram                             │
+        │ 13. Disaster Recovery Architecture                     │
+        │ 14. Migration/Transition Roadmap                       │
+        └─────────────────────────────────────────────────────────┘
+        """
+
+    # ── Phase 5: Technical Volume Generation ───────────────
+    def generate_technical_volume(self, solution, diagrams, rfp_format) -> TechnicalVolume:
+        """
+        Produces the COMPLETE Technical Volume (Volume I) for the proposal.
+
+        Adapts to RFP-specified format (Section L/M instructions) while
+        ensuring every requirement is addressed.
+
+        Each section includes:
+        - Professional narrative (proposal-ready language)
+        - Relevant diagrams (embedded in correct locations)
+        - Requirement traceability (maps to compliance matrix)
+        - Win themes woven throughout
+        - Discriminators highlighted
+        - Past performance references where relevant
+
+        Sections generated:
+        1.  Executive Technical Summary
+        2.  Understanding of Requirements (paraphrased, shows deep understanding)
+        3.  Technical Approach & Methodology
+        4.  System Architecture & Design
+        5.  AI/ML Solution (models, training, inference, monitoring)
+        6.  Agentic AI Design (agents, orchestration, HITL, safety)
+        7.  Data Management & Analytics
+        8.  Integration Strategy
+        9.  Security & Compliance Approach
+        10. Infrastructure & Cloud Strategy
+        11. DevOps & Continuous Delivery
+        12. Scalability & Performance Engineering
+        13. Innovation & Emerging Technology
+        14. Risk Identification & Mitigation
+        15. Technology Roadmap & Future Enhancements
+        """
+
+    # ── Phase 6: Solution Validation ───────────────────────
+    def validate_solution(self, solution, requirements) -> ValidationReport:
+        """
+        Self-critique loop: validates the generated solution against:
+        1. Every RFP requirement (are they all addressed?)
+        2. Evaluation criteria (are high-weight items emphasized?)
+        3. Technical feasibility (are the claims realistic?)
+        4. Consistency (do diagrams match narrative?)
+        5. Compliance (does it meet all regulatory requirements?)
+        6. Competitiveness (does it include strong differentiators?)
+        7. Cost alignment (can this be built within budget?)
+
+        Returns ValidationReport with issues + auto-fixes.
+        """
+```
+
+#### 8.3.4 Solution Architect LangGraph
+
+```python
+class SolutionArchitectState(TypedDict):
+    rfp_requirements: list
+    compliance_matrix: list
+    company_strategy: dict
+    knowledge_bundle: dict          # Retrieved from multimodal RAG
+    requirement_analysis: dict
+    selected_frameworks: list       # Which solutioning frameworks to use
+    technical_solution: dict
+    diagrams: list                  # Generated architecture diagrams
+    technical_volume: dict          # Full proposal-ready volume
+    validation_report: dict
+    iteration_count: int            # For self-critique loops
+
+sa_graph = StateGraph(SolutionArchitectState)
+
+# Main flow
+sa_graph.add_node("analyze_requirements", deep_requirement_analysis)
+sa_graph.add_node("select_frameworks", select_solutioning_frameworks)
+sa_graph.add_node("retrieve_knowledge", multimodal_rag_retrieval)
+sa_graph.add_node("synthesize_solution", synthesize_technical_solution)
+sa_graph.add_node("generate_diagrams", generate_architecture_diagrams)
+sa_graph.add_node("generate_volume", generate_technical_volume)
+sa_graph.add_node("validate", validate_and_critique)
+sa_graph.add_node("refine", refine_solution)          # If validation finds issues
+sa_graph.add_node("human_review", interrupt_for_review)  # HITL gate
+
+# Edges
+sa_graph.add_edge("analyze_requirements", "select_frameworks")
+sa_graph.add_edge("select_frameworks", "retrieve_knowledge")
+sa_graph.add_edge("retrieve_knowledge", "synthesize_solution")
+sa_graph.add_edge("synthesize_solution", "generate_diagrams")
+sa_graph.add_edge("generate_diagrams", "generate_volume")
+sa_graph.add_edge("generate_volume", "validate")
+
+# Conditional: if validation passes → human review; if fails → refine → re-validate
+sa_graph.add_conditional_edges("validate", route_validation)
+sa_graph.add_edge("refine", "generate_diagrams")  # Re-generate after refinement
+sa_graph.add_edge("human_review", END)
+```
+
+#### 8.3.5 MCP Tool Servers for Solution Architect
+
+```python
+# New MCP servers specifically for the SA agent
+
+# ── Knowledge Vault Search ─────────────────────────────────
+@knowledge_server.tool("search_reference_architectures")
+async def search_architectures(query: str, technology_tags: list[str],
+                               domain: str, top_k: int = 10):
+    """Search knowledge vault for relevant reference architectures"""
+
+@knowledge_server.tool("search_diagrams")
+async def search_diagrams(query: str, diagram_type: str, top_k: int = 5):
+    """Search knowledge vault for relevant architecture diagrams (multimodal)"""
+
+@knowledge_server.tool("search_best_practices")
+async def search_practices(technology: str, context: str, top_k: int = 10):
+    """Search for best practices and design patterns"""
+
+@knowledge_server.tool("search_past_solutions")
+async def search_past_solutions(requirement_summary: str, domain: str, top_k: int = 5):
+    """Search past winning proposal technical sections"""
+
+# ── Diagram Generation ─────────────────────────────────────
+@diagram_server.tool("generate_mermaid_diagram")
+async def gen_mermaid(diagram_type: str, components: dict, title: str) -> str:
+    """Generate Mermaid.js diagram code and render to SVG/PNG"""
+
+@diagram_server.tool("generate_d2_diagram")
+async def gen_d2(diagram_spec: dict, title: str) -> str:
+    """Generate D2 diagram code and render to SVG/PNG"""
+
+@diagram_server.tool("generate_plantuml_diagram")
+async def gen_plantuml(uml_type: str, spec: dict) -> str:
+    """Generate PlantUML diagram and render"""
+
+@diagram_server.tool("annotate_existing_diagram")
+async def annotate(source_image_path: str, annotations: list[dict]) -> str:
+    """Take an existing diagram from vault and add annotations/modifications"""
+
+# ── Technical Writing ──────────────────────────────────────
+@writing_server.tool("generate_section_with_traceability")
+async def gen_section(section_name: str, content_outline: dict,
+                      mapped_requirements: list[str], win_themes: list[str]):
+    """Generate a proposal section with requirement traceability matrix"""
+
+@writing_server.tool("embed_diagrams_in_docx")
+async def embed_diagrams(docx_template: str, diagram_placements: list[dict]):
+    """Insert generated diagrams into DOCX template at specified locations"""
+```
+
+#### 8.3.6 What YOU Upload to the Knowledge Vault
+
+To make the SA agent truly autonomous and expert-level, you populate the Knowledge Vault with:
+
+```
+YOUR KNOWLEDGE BASE (upload all of this):
+├── Reference Architectures/
+│   ├── AI/ML platform architecture (your standard design)
+│   ├── Agentic AI system architecture
+│   ├── RAG system architecture
+│   ├── Data lake/mesh architecture
+│   ├── Cloud-native microservices architecture
+│   ├── Zero Trust security architecture
+│   ├── MLOps pipeline architecture
+│   └── ... any architecture you've designed or follow
+│
+├── Design Patterns/
+│   ├── Agentic AI patterns (LangGraph, CrewAI, AutoGen patterns)
+│   ├── RAG patterns (naive, advanced, modular, graph, agentic)
+│   ├── MCP tool server patterns
+│   ├── A2A agent communication patterns
+│   ├── HITL interrupt patterns
+│   ├── Microservices patterns
+│   ├── Event-driven patterns
+│   └── ... all patterns you use
+│
+├── Best Practices/
+│   ├── Your company's engineering standards
+│   ├── Code review guidelines
+│   ├── Security best practices
+│   ├── Performance optimization guides
+│   ├── Testing strategies
+│   └── ... your internal standards
+│
+├── Architecture Diagrams (IMAGES)/
+│   ├── Past solution architecture diagrams (.png, .jpg, .svg, .vsdx)
+│   ├── Network topology diagrams
+│   ├── Data flow diagrams
+│   ├── Infrastructure diagrams
+│   └── ... ALL your visual architecture assets
+│
+├── Technical Documents/
+│   ├── Whitepapers you've written
+│   ├── Technical reports
+│   ├── Framework evaluations
+│   ├── Technology comparison matrices
+│   └── ... all technical writing
+│
+├── Past Winning Proposals/
+│   ├── Technical volumes from won proposals (redacted if needed)
+│   ├── Management approach sections
+│   ├── Staffing plans
+│   └── ... proven proposal content
+│
+├── Compliance & Standards/
+│   ├── NIST 800-53 control mappings
+│   ├── FedRAMP requirements
+│   ├── CMMC compliance guides
+│   ├── Section 508 accessibility
+│   └── ... regulatory knowledge
+│
+└── Innovation & Research/
+    ├── Emerging technology assessments
+    ├── AI safety and ethics frameworks
+    ├── Industry trend analyses
+    └── ... forward-looking material
+```
 
 ### 8.4 Review Workflow
 
@@ -689,33 +1441,39 @@ ai_orchestrator/
 ├── requirements.txt
 ├── src/
 │   ├── main.py                    # FastAPI app for AI endpoints
-│   ├── agents/
-│   │   ├── orchestrator.py        # Master agent (LangGraph graph)
-│   │   ├── opportunity_scout.py   # Scans & scores opportunities
-│   │   ├── rfp_parser.py          # Extracts RFP requirements
-│   │   ├── compliance_agent.py    # Builds compliance matrix
-│   │   ├── past_perf_agent.py     # RAG retrieval of past performance
-│   │   ├── solution_architect.py  # Technical solution design
-│   │   ├── proposal_writer.py     # Section-by-section authoring
-│   │   ├── pricing_agent.py       # Scenario generation & analysis
-│   │   ├── qa_agent.py            # Quality & consistency checker
-│   │   ├── submission_agent.py    # Package & checklist builder
-│   │   ├── contract_agent.py      # Contract drafting & risk scan
-│   │   ├── communication_agent.py # Emails, Q&A, narratives
-│   │   └── learning_agent.py      # Policy updates from outcomes
-│   ├── mcp_servers/
-│   │   ├── samgov_tools.py        # SAM.gov API tools
-│   │   ├── document_tools.py      # PDF/DOCX parse, chunk, embed
-│   │   ├── vector_search.py       # pgvector RAG search
-│   │   ├── template_render.py     # DOCX/PDF generation
-│   │   ├── email_tools.py         # Email drafting & sending
-│   │   ├── workflow_tools.py      # Stage transitions & tasks
-│   │   └── pricing_tools.py       # Rate card & scenario calc
-│   ├── graphs/
-│   │   ├── daily_scan_graph.py    # Daily opportunity pipeline
-│   │   ├── proposal_graph.py      # Full proposal generation flow
-│   │   ├── pricing_graph.py       # Pricing analysis flow
-│   │   └── contract_graph.py      # Contract generation flow
+│   │   ├── agents/
+│   │   │   ├── orchestrator.py        # Master agent (LangGraph graph)
+│   │   │   ├── strategy_agent.py      # Company AI Strategy Agent (NEW)
+│   │   │   ├── opportunity_scout.py   # Scans & scores opportunities
+│   │   │   ├── rfp_parser.py          # Extracts RFP requirements
+│   │   │   ├── compliance_agent.py    # Builds compliance matrix
+│   │   │   ├── past_perf_agent.py     # RAG retrieval of past performance
+│   │   │   ├── solution_architect.py  # FULL Autonomous SA Agent (UPGRADED)
+│   │   │   ├── proposal_writer.py     # Section-by-section authoring
+│   │   │   ├── pricing_agent.py       # Scenario generation & analysis
+│   │   │   ├── qa_agent.py            # Quality & consistency checker
+│   │   │   ├── submission_agent.py    # Package & checklist builder
+│   │   │   ├── contract_agent.py      # Contract drafting & risk scan
+│   │   │   ├── communication_agent.py # Emails, Q&A, narratives
+│   │   │   └── learning_agent.py      # Policy updates from outcomes
+│   │   ├── mcp_servers/
+│   │   │   ├── samgov_tools.py        # SAM.gov API tools
+│   │   │   ├── document_tools.py      # PDF/DOCX parse, chunk, embed
+│   │   │   ├── vector_search.py       # pgvector RAG search (text)
+│   │   │   ├── knowledge_vault_tools.py # Multimodal knowledge vault search (NEW)
+│   │   │   ├── diagram_tools.py       # Mermaid/D2/PlantUML generation (NEW)
+│   │   │   ├── image_search_tools.py  # CLIP-based image/diagram search (NEW)
+│   │   │   ├── template_render.py     # DOCX/PDF generation
+│   │   │   ├── email_tools.py         # Email drafting & sending
+│   │   │   ├── workflow_tools.py      # Stage transitions & tasks
+│   │   │   └── pricing_tools.py       # Rate card & scenario calc
+│   │   ├── graphs/
+│   │   │   ├── daily_scan_graph.py    # Daily opportunity pipeline
+│   │   │   ├── strategy_graph.py      # Strategic scoring & portfolio analysis (NEW)
+│   │   │   ├── solution_arch_graph.py # Full SA agent pipeline (NEW)
+│   │   │   ├── proposal_graph.py      # Full proposal generation flow
+│   │   │   ├── pricing_graph.py       # Pricing analysis flow
+│   │   │   └── contract_graph.py      # Contract generation flow
 │   ├── rag/
 │   │   ├── embeddings.py          # Embedding generation
 │   │   ├── retriever.py           # Vector search + reranking
@@ -775,19 +1533,39 @@ graph.add_conditional_edges("human_review", route_approval)
 ```python
 # Structured events for inter-agent communication
 EVENTS = {
-    "OpportunityIngested":    {"source": "opportunity_scout", "data": "raw opportunity"},
-    "OpportunityScored":      {"source": "opportunity_scout", "data": "scored opportunity"},
-    "RFPParsed":              {"source": "rfp_parser", "data": "extracted requirements"},
-    "ComplianceMatrixReady":  {"source": "compliance_agent", "data": "matrix items"},
-    "PastPerfMatched":        {"source": "past_perf_agent", "data": "matched projects"},
-    "SolutionDesigned":       {"source": "solution_architect", "data": "architecture"},
-    "SectionDrafted":         {"source": "proposal_writer", "data": "section content"},
-    "PricingReady":           {"source": "pricing_agent", "data": "scenarios"},
-    "QAComplete":             {"source": "qa_agent", "data": "issues found"},
-    "ApprovalRequested":      {"source": "any agent", "data": "approval request"},
-    "ApprovalGranted":        {"source": "human", "data": "decision + feedback"},
-    "SubmissionPackaged":     {"source": "submission_agent", "data": "package ready"},
-    "OutcomeRecorded":        {"source": "learning_agent", "data": "win/loss + metrics"},
+    # ── Opportunity & Strategy Events ──────────────────────
+    "OpportunityIngested":      {"source": "opportunity_scout", "data": "raw opportunity"},
+    "OpportunityScored":        {"source": "opportunity_scout", "data": "scored opportunity"},
+    "StrategicScoreComputed":   {"source": "strategy_agent", "data": "strategic alignment score + rationale"},
+    "BidRecommendationReady":   {"source": "strategy_agent", "data": "bid/no-bid recommendation"},
+    "PortfolioAnalysisReady":   {"source": "strategy_agent", "data": "portfolio health report"},
+    "WinThemesGenerated":       {"source": "strategy_agent", "data": "deal-specific win themes"},
+    "CompetitiveAssessmentDone": {"source": "strategy_agent", "data": "competitive landscape"},
+
+    # ── RFP & Compliance Events ────────────────────────────
+    "RFPParsed":                {"source": "rfp_parser", "data": "extracted requirements"},
+    "ComplianceMatrixReady":    {"source": "compliance_agent", "data": "matrix items"},
+    "PastPerfMatched":          {"source": "past_perf_agent", "data": "matched projects"},
+
+    # ── Solution Architect Events (NEW) ────────────────────
+    "RequirementsAnalyzed":     {"source": "solution_architect", "data": "deep requirement analysis"},
+    "KnowledgeRetrieved":       {"source": "solution_architect", "data": "multimodal knowledge bundle"},
+    "SolutionSynthesized":      {"source": "solution_architect", "data": "complete technical solution"},
+    "DiagramsGenerated":        {"source": "solution_architect", "data": "architecture diagrams (14+)"},
+    "TechnicalVolumeReady":     {"source": "solution_architect", "data": "full Volume I draft"},
+    "SolutionValidated":        {"source": "solution_architect", "data": "validation report"},
+
+    # ── Proposal & Review Events ───────────────────────────
+    "SectionDrafted":           {"source": "proposal_writer", "data": "section content"},
+    "PricingReady":             {"source": "pricing_agent", "data": "scenarios"},
+    "QAComplete":               {"source": "qa_agent", "data": "issues found"},
+
+    # ── Approval & Submission Events ───────────────────────
+    "ApprovalRequested":        {"source": "any agent", "data": "approval request"},
+    "ApprovalGranted":          {"source": "human", "data": "decision + feedback"},
+    "SubmissionPackaged":       {"source": "submission_agent", "data": "package ready"},
+    "OutcomeRecorded":          {"source": "learning_agent", "data": "win/loss + metrics"},
+    "StrategyUpdateRecommended": {"source": "learning_agent", "data": "strategy evolution suggestions"},
 }
 ```
 
@@ -885,10 +1663,17 @@ class GoalSetting(models.Model):
 - `AuditLog`, `AITraceLog`
 - `Notification`, `NotificationPreference`
 
+### Company Strategy (NEW)
+- `CompanyStrategy` (living strategic plan — markets, goals, capacity, differentiators)
+- `StrategicGoal` (quantified objectives with targets and deadlines)
+- `PortfolioSnapshot` (periodic pipeline health vs strategy)
+- `CompetitiveIntelligence` (competitor profiles, win/loss patterns)
+
 ### Opportunity Intelligence
 - `OpportunitySource` (SAM.gov, labs, etc.)
 - `Opportunity` (normalized, with embeddings)
 - `OpportunityScore` (fit score + factors + explanation)
+- `StrategicScore` (strategy alignment score per opportunity) (NEW)
 - `CompanyProfile` (UEI, CAGE, capabilities, embeddings)
 - `DailyDigest` (Top 10 daily report)
 
@@ -908,6 +1693,17 @@ class GoalSetting(models.Model):
 ### Past Performance
 - `PastPerformance` (project + metrics + narrative + embedding)
 - `PastPerformanceMatch` (opportunity → past perf relevance)
+
+### Knowledge Vault (NEW — Multimodal RAG)
+- `KnowledgeVault` (reference architectures, diagrams, patterns, best practices, images, docs)
+- `KnowledgeChunk` (chunked + embedded pieces — text, image, table, code)
+- `SolutioningFramework` (TOGAF, C4, arc42, well-architected, agentic patterns, RAG patterns)
+
+### Solution Architect Outputs (NEW)
+- `TechnicalSolution` (full synthesized solution per deal)
+- `ArchitectureDiagram` (generated Mermaid/D2/PlantUML diagrams + rendered images)
+- `RequirementAnalysis` (deep RFP requirement analysis)
+- `SolutionValidationReport` (self-critique validation results)
 
 ### Proposals
 - `Proposal` (deal → proposal, with version history)
@@ -1045,6 +1841,24 @@ ai-deal-manager/
 │       │   └── services/
 │       │       ├── generator.py
 │       │       └── clause_scanner.py
+│       ├── strategy/                     # Company Strategy (NEW)
+│       │   ├── models.py            # CompanyStrategy, StrategicGoal, PortfolioSnapshot
+│       │   ├── serializers.py
+│       │   ├── views.py
+│       │   ├── urls.py
+│       │   └── services/
+│       │       ├── portfolio_analyzer.py   # Pipeline health vs strategy
+│       │       └── competitive_intel.py    # Competitor analysis
+│       ├── knowledge_vault/              # Multimodal Knowledge Vault (NEW)
+│       │   ├── models.py            # KnowledgeVault, KnowledgeChunk
+│       │   ├── serializers.py
+│       │   ├── views.py
+│       │   ├── urls.py
+│       │   ├── services/
+│       │   │   ├── ingestion.py     # Upload + chunking + embedding pipeline
+│       │   │   ├── multimodal_rag.py # Text + image retrieval
+│       │   │   └── image_embedder.py # CLIP embeddings for diagrams/images
+│       │   └── tasks.py             # Async embedding generation
 │       ├── communications/
 │       │   ├── models.py
 │       │   ├── serializers.py
@@ -1081,6 +1895,8 @@ ai-deal-manager/
 │       │   ├── contracts/
 │       │   ├── past-performance/
 │       │   ├── communications/
+│       │   ├── knowledge-vault/      # Knowledge Vault management (NEW)
+│       │   ├── strategy/             # Company strategy dashboard (NEW)
 │       │   ├── analytics/
 │       │   ├── settings/
 │       │   └── admin/
@@ -1174,15 +1990,27 @@ ai-deal-manager/
 - [ ] Frontend: Opportunity list, detail view, score breakdown
 - [ ] Lab procurement page monitors (configurable)
 
-### Sprint 5-6: Deal Pipeline (Phase 3)
+### Sprint 5: Company AI Strategy Agent (Phase 4A — NEW)
+- [ ] CompanyStrategy, StrategicGoal, PortfolioSnapshot models
+- [ ] Strategy agent: strategic scoring of opportunities
+- [ ] Strategy agent: bid/no-bid recommendation engine
+- [ ] Strategy agent: portfolio analysis & balance scoring
+- [ ] Strategy agent: win theme generation
+- [ ] Strategy agent: competitive landscape assessment
+- [ ] LangGraph strategy_graph.py (full pipeline)
+- [ ] Frontend: Strategy dashboard + portfolio health view
+- [ ] Frontend: Strategy settings (target agencies, domains, goals)
+- [ ] Integration: strategic score injected into bid/no-bid HITL gate
+
+### Sprint 6-7: Deal Pipeline (Phase 3)
 - [ ] Deal model + workflow state machine
 - [ ] Task & checklist system with templates
-- [ ] Approval system with HITL gates
+- [ ] Approval system with HITL gates (now includes strategic score)
 - [ ] Frontend: Kanban pipeline board
 - [ ] Frontend: Deal detail page with timeline
 - [ ] Notifications (in-app + email) for stage changes
 
-### Sprint 7-8: RFP & Past Performance (Phase 4-5)
+### Sprint 8-9: RFP & Past Performance (Phase 4-5)
 - [ ] RFP document upload + AI extraction
 - [ ] Compliance matrix generator
 - [ ] Amendment diff tracker
@@ -1191,16 +2019,37 @@ ai-deal-manager/
 - [ ] Frontend: RFP workspace with compliance matrix
 - [ ] Frontend: Past performance library
 
-### Sprint 9-11: Proposal Studio (Phase 6)
-- [ ] Proposal templates (5 volumes)
-- [ ] AI section generation (LangGraph proposal graph)
-- [ ] Solution architect agent
-- [ ] Review workflow (pink/red/gold team)
-- [ ] Frontend: Proposal editor with AI workbench
-- [ ] Frontend: Review interface with comments
-- [ ] DOCX export with professional formatting
+### Sprint 10: Multimodal Knowledge Vault (NEW)
+- [ ] KnowledgeVault + KnowledgeChunk models
+- [ ] Upload pipeline: PDF/DOCX/images/presentations → chunk → embed
+- [ ] Text embedding pipeline (OpenAI/Anthropic embeddings → pgvector)
+- [ ] Image embedding pipeline (CLIP model → image vectors)
+- [ ] Multimodal RAG retriever (text + image + table + code search)
+- [ ] MCP tools: knowledge_vault_tools.py, image_search_tools.py
+- [ ] Frontend: Knowledge Vault management (upload, browse, tag, search)
+- [ ] Seed vault with solutioning frameworks library (TOGAF, C4, arc42, etc.)
 
-### Sprint 12-13: Pricing & Contracts (Phase 7-8)
+### Sprint 11-13: Fully Autonomous AI Solutions Architect + Proposal Studio (Phase 6 — MAJOR UPGRADE)
+- [ ] Solution Architect Agent: requirement deep-dive analysis
+- [ ] Solution Architect Agent: multimodal knowledge retrieval (RAG)
+- [ ] Solution Architect Agent: framework selection (C4, TOGAF, arc42, etc.)
+- [ ] Solution Architect Agent: solution synthesis engine (15+ architecture areas)
+- [ ] Diagram generation: Mermaid.js diagrams → SVG/PNG rendering
+- [ ] Diagram generation: D2 diagrams → SVG/PNG rendering
+- [ ] Diagram generation: PlantUML diagrams → rendering
+- [ ] MCP tools: diagram_tools.py (generate + render + annotate)
+- [ ] Solution Architect Agent: full technical volume generation
+- [ ] Solution Architect Agent: self-critique validation loop
+- [ ] LangGraph solution_arch_graph.py (full autonomous SA pipeline)
+- [ ] Proposal templates (5 volumes)
+- [ ] AI section generation (LangGraph proposal graph, using SA output)
+- [ ] Review workflow (pink/red/gold team)
+- [ ] Frontend: Proposal editor with AI workbench + diagram viewer
+- [ ] Frontend: Solution Architect workspace (view generated architectures)
+- [ ] Frontend: Review interface with comments
+- [ ] DOCX export with embedded diagrams + professional formatting
+
+### Sprint 14: Pricing & Contracts (Phase 7-8)
 - [ ] Rate card management
 - [ ] Pricing scenario engine
 - [ ] Price-to-win analysis
@@ -1209,13 +2058,13 @@ ai-deal-manager/
 - [ ] Frontend: Pricing scenario comparison
 - [ ] Frontend: Contract workspace
 
-### Sprint 14-15: AI Orchestration & Learning (Phase 9-10)
-- [ ] LangGraph multi-agent orchestration
-- [ ] MCP tool servers (all integrations)
-- [ ] A2A event system
+### Sprint 15-16: AI Orchestration & Learning (Phase 9-10)
+- [ ] LangGraph multi-agent orchestration (now 14 agents including strategy + SA)
+- [ ] MCP tool servers (all integrations, including 3 new SA-specific servers)
+- [ ] A2A event system (expanded with strategy + SA events)
 - [ ] Communications agent (email, Q&A)
 - [ ] Policy & goal settings manager
-- [ ] Learning agent (outcome tracking + policy updates)
+- [ ] Learning agent (outcome tracking + policy updates + strategy evolution)
 - [ ] Submission packaging + audit trail
 - [ ] Frontend: AI workbench, policy settings, analytics dashboards
 
@@ -1267,13 +2116,17 @@ JWT_EXPIRATION_HOURS=24
 
 ## Success Criteria
 
-1. **Daily Top 10 opportunities** automatically scored and presented
-2. **End-to-end pipeline** from opportunity → proposal → submission → contract
-3. **AI generates** compliance matrices, proposal sections, pricing scenarios, contracts
-4. **HITL gates** enforce human approval at all critical decisions
-5. **Learning loop** improves scoring, writing, and pricing over time
-6. **Professional output** (DOCX proposals with proper formatting, branding)
-7. **Full audit trail** for every action (human and AI)
-8. **RBAC** with MFA protecting sensitive operations
-9. **Docker Compose** single-command deployment with no port conflicts
-10. **Real-time** collaboration and notifications via WebSocket
+1. **Daily Top 10 opportunities** automatically scored (technical fit + strategic alignment)
+2. **Company AI Strategy Agent** maintains living strategy, influences every bid decision, balances portfolio
+3. **End-to-end pipeline** from opportunity → proposal → submission → contract
+4. **Fully Autonomous AI Solutions Architect** produces complete technical solutions with 14+ architecture diagrams from your multimodal knowledge vault
+5. **Multimodal Knowledge Vault** stores and retrieves your reference architectures, images, diagrams, documents, patterns, and best practices via RAG
+6. **AI generates** compliance matrices, proposal sections, pricing scenarios, contracts — all grounded in YOUR knowledge base
+7. **HITL gates** enforce human approval at all critical decisions
+8. **Learning loop** improves scoring, writing, pricing, AND evolves company strategy over time
+9. **Professional output** (DOCX proposals with embedded architecture diagrams, proper formatting, branding)
+10. **Full audit trail** for every action (human and AI)
+11. **RBAC** with MFA protecting sensitive operations
+12. **Docker Compose** single-command deployment with no port conflicts
+13. **Real-time** collaboration and notifications via WebSocket
+14. **14 specialized AI agents** (up from 12) orchestrated via LangGraph + MCP + A2A
