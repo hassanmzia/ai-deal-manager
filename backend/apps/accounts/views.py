@@ -14,6 +14,7 @@ from apps.accounts.permissions import IsAdmin
 from apps.accounts.serializers import (
     ChangePasswordSerializer,
     RegisterSerializer,
+    UserAdminUpdateSerializer,
     UserCreateSerializer,
     UserProfileSerializer,
     UserSerializer,
@@ -66,6 +67,22 @@ class UserListView(ListCreateAPIView):
         if self.request.method == "POST":
             return UserCreateSerializer
         return UserSerializer
+
+
+class UserAdminDetailView(RetrieveUpdateAPIView):
+    """Retrieve or update a specific user by ID (admin only)."""
+
+    queryset = User.objects.all()
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def get_serializer_class(self):
+        if self.request.method in ("PUT", "PATCH"):
+            return UserAdminUpdateSerializer
+        return UserSerializer
+
+    def update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        return super().update(request, *args, **kwargs)
 
 
 class ChangePasswordView(UpdateAPIView):
