@@ -36,58 +36,75 @@ def run_research_project(self, project_id: str):
     )
 
     try:
-        # TODO: Replace placeholder logic with actual research execution
-        # using WebResearcher and CompetitorAnalyzer services.
-        #
-        # Example flow:
-        #   researcher = WebResearcher()
-        #   if project.research_type == "market_analysis":
-        #       results = await researcher.research_market_trends(...)
-        #   elif project.research_type == "agency_analysis":
-        #       results = await researcher.analyze_agency(...)
-        #   ...
-        #
-        # For now, populate with placeholder data.
+        import asyncio
+        from apps.research.services.web_researcher import WebResearcher
+
+        project.status = "in_progress"
+        project.save(update_fields=["status", "updated_at"])
+
+        researcher = WebResearcher()
+        params = project.parameters or {}
+        deal = project.deal
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            if project.research_type == "agency_analysis":
+                agency_name = (
+                    params.get("agency_name")
+                    or (deal.opportunity.agency if deal.opportunity else "")
+                    or deal.title
+                )
+                result = loop.run_until_complete(
+                    researcher.analyze_agency(agency_name)
+                )
+            elif project.research_type == "competitive_intel":
+                competitor = params.get("competitor_name", "")
+                if competitor:
+                    result = loop.run_until_complete(
+                        researcher.analyze_competitor(competitor)
+                    )
+                else:
+                    result = loop.run_until_complete(
+                        researcher.search_web(
+                            f"competitors government contracting {deal.title}"
+                        )
+                    )
+            elif project.research_type in ("market_analysis", "technology_trends"):
+                naics = params.get("naics_codes") or (
+                    [deal.opportunity.naics_code]
+                    if deal.opportunity and deal.opportunity.naics_code
+                    else []
+                )
+                agencies = params.get("agencies") or (
+                    [deal.opportunity.agency]
+                    if deal.opportunity and deal.opportunity.agency
+                    else []
+                )
+                result = loop.run_until_complete(
+                    researcher.research_market_trends(naics, agencies)
+                )
+            elif project.research_type == "incumbent_analysis":
+                query = params.get("query") or f"incumbent contractor {deal.title}"
+                result = loop.run_until_complete(researcher.search_web(query))
+            else:
+                query = params.get("query") or project.title
+                result = loop.run_until_complete(researcher.search_web(query))
+        finally:
+            loop.close()
 
         project.findings = {
             "status": "completed",
             "research_type": project.research_type,
-            "summary": (
-                f"Research completed for project '{project.title}'. "
-                f"This is placeholder data pending API integration."
-            ),
-            "key_findings": [
-                "Finding 1: Placeholder insight based on research parameters.",
-                "Finding 2: Market conditions appear favorable.",
-                "Finding 3: Further investigation recommended.",
-            ],
-            "data_quality": "placeholder",
+            **result,
         }
-
         project.executive_summary = (
-            f"Executive Summary for '{project.title}'\n\n"
-            f"This research project analyzed {project.get_research_type_display()} "
-            f"for the associated deal. Key findings indicate favorable market "
-            f"conditions with some areas requiring further investigation.\n\n"
-            f"Note: This is placeholder content. Actual AI-generated summaries "
-            f"will be produced once research APIs are integrated."
+            result.get("executive_summary")
+            or (result.get("overview") or {}).get("mission", "")
+            or result.get("analysis", "")
+            or f"Research completed for '{project.title}'."
         )
-
-        project.sources = [
-            {
-                "url": "https://sam.gov/placeholder",
-                "title": "SAM.gov Data",
-                "relevance_score": 0.92,
-                "snippet": "Government procurement data source.",
-            },
-            {
-                "url": "https://fpds.gov/placeholder",
-                "title": "FPDS Contract Data",
-                "relevance_score": 0.88,
-                "snippet": "Federal procurement data system records.",
-            },
-        ]
-
+        project.sources = result.get("sources", [])
         project.status = "completed"
         project.save(
             update_fields=[
