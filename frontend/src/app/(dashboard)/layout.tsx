@@ -13,12 +13,15 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const tokens = useAuthStore((state) => state.tokens);
+  const initialize = useAuthStore((state) => state.initialize);
 
   useEffect(() => {
     if (!tokens?.access) {
       router.push("/login");
+    } else {
+      initialize();
     }
-  }, [tokens, router]);
+  }, [tokens, router, initialize]);
 
   if (!tokens?.access) {
     return null;

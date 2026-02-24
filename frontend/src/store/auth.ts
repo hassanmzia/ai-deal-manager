@@ -24,6 +24,7 @@ interface AuthState {
   user: User | null;
   tokens: Tokens | null;
   isAuthenticated: boolean;
+  initialize: () => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   refreshToken: () => Promise<void>;
@@ -44,6 +45,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         })()
       : null,
   isAuthenticated: false,
+
+  initialize: async () => {
+    const { tokens, user } = get();
+    if (!tokens?.access || user) return; // already loaded or no token
+    try {
+      const userResponse = await api.get("/auth/me/");
+      set({ user: userResponse.data, isAuthenticated: true });
+    } catch {
+      // Token is invalid/expired — the api interceptor will redirect to /login
+    }
+  },
 
   login: async (username: string, password: string) => {
     const response = await api.post("/auth/token/", { username, password });
