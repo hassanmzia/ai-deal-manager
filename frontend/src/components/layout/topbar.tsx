@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, LogOut, User, Trash2 } from "lucide-react";
+import { Bell, LogOut, User, Trash2, Sun, Moon } from "lucide-react";
 import { useState } from "react";
 import { useAuthStore } from "@/store/auth";
+import { useThemeStore } from "@/store/theme";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,6 +25,7 @@ interface Notification {
 export function Topbar() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const { theme, toggleTheme } = useThemeStore();
   // Lazy initializer: runs only on the client, avoiding SSR/hydration timestamp mismatch.
   // Module-level Date.now() calls differ between server and client render times.
   const [notifications, setNotifications] = useState<Notification[]>(() => [
@@ -82,6 +84,22 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Theme toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          className="relative text-muted-foreground hover:text-foreground transition-colors"
+          title={theme === "dark" ? "Light mode" : "Dark mode"}
+        >
+          {theme === "dark" ? (
+            <Sun className="h-5 w-5 text-yellow-400" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
+        </Button>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">
