@@ -445,9 +445,9 @@ export default function ProposalsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Proposals</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Proposals</h1>
           <p className="text-muted-foreground">
             Manage and track all proposal documents and review cycles
           </p>
@@ -472,7 +472,7 @@ export default function ProposalsPage() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search proposals..."
@@ -484,7 +484,7 @@ export default function ProposalsPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:h-9 sm:w-auto"
             >
               <option value="">All Statuses</option>
               {allStatuses.map((s) => (

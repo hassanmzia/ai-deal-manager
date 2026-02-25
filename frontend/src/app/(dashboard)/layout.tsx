@@ -15,12 +15,10 @@ export default function DashboardLayout({
   const router = useRouter();
   const tokens = useAuthStore((state) => state.tokens);
   const initialize = useAuthStore((state) => state.initialize);
-  // Track whether we've completed the client-side auth check.
-  // This prevents rendering different trees on server vs client (hydration errors).
   const [mounted, setMounted] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // initialize() reads localStorage and fetches /auth/me/ — client-side only
     initialize().finally(() => setMounted(true));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -30,8 +28,6 @@ export default function DashboardLayout({
     }
   }, [mounted, tokens, router]);
 
-  // Render nothing until the client-side auth check completes.
-  // Both server and first client render return null → no mismatch.
   if (!mounted) {
     return null;
   }
@@ -42,10 +38,13 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Topbar />
-        <main className="flex-1 overflow-y-auto bg-secondary/30 p-6">
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+        <Topbar onMenuClick={() => setSidebarOpen(true)} />
+        <main className="flex-1 overflow-y-auto bg-secondary/30 p-4 md:p-6">
           <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>
