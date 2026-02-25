@@ -1,8 +1,17 @@
+import json
 import logging
+import os
 from abc import ABC, abstractmethod
 from typing import Any
 
 logger = logging.getLogger("ai_orchestrator.agents")
+
+# Redis pub/sub channel prefix for agent events
+_AGENT_CHANNEL_PREFIX = "agent:events"
+
+
+def _get_redis_url() -> str:
+    return os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 
 class BaseAgent(ABC):
@@ -40,28 +49,59 @@ class BaseAgent(ABC):
         execution_id: str | None = None,
     ) -> None:
         """
-        Publish an A2A (Agent-to-Agent) event.
+        Publish an A2A (Agent-to-Agent) event to Redis pub/sub.
 
-        This is a stub for inter-agent communication. In production, this will
-        publish events to Redis pub/sub or a message broker so other agents
-        and the realtime service can react to agent activity.
+        Events are published to two channels:
+          - ``agent:events:<execution_id>``  (execution-scoped — frontend SSE / Node realtime)
+          - ``agent:events:broadcast``       (global — other agents can subscribe)
 
         Args:
-            event_type: The type of event (e.g., 'thinking', 'tool_call', 'output', 'error').
+            event_type: The type of event ('thinking', 'tool_call', 'output', 'error').
             data: The event payload.
             execution_id: Optional execution ID for tracking the agent run.
         """
-        logger.info(
-            "Agent '%s' emitting event [%s] (execution_id=%s): %s",
+        payload = {
+            "agent_name": self.agent_name,
+            "event_type": event_type,
+            "execution_id": execution_id,
+            "data": data,
+        }
+
+        log_level = logging.ERROR if event_type == "error" else logging.INFO
+        logger.log(
+            log_level,
+            "Agent '%s' event [%s] (exec=%s)",
             self.agent_name,
             event_type,
             execution_id,
-            data,
         )
-        # TODO: Publish to Redis pub/sub or message broker
-        # Example:
-        #   await redis_client.publish(f"agent:{execution_id}", json.dumps({
-        #       "agent_name": self.agent_name,
-        #       "event_type": event_type,
-        #       "data": data,
-        #   }))
+
+        # Best-effort Redis publish — never crash the agent on pub/sub failure
+        try:
+            await _publish_to_redis(payload, execution_id)
+        except Exception as exc:
+            logger.warning(
+                "emit_event: Redis publish failed for agent '%s' event '%s': %s",
+                self.agent_name,
+                event_type,
+                exc,
+            )
+
+
+async def _publish_to_redis(payload: dict[str, Any], execution_id: str | None) -> None:
+    """Publish payload to Redis pub/sub using redis-py async client."""
+    try:
+        import redis.asyncio as aioredis
+    except ImportError:
+        logger.debug("redis-py async not available — skipping pub/sub publish")
+        return
+
+    message = json.dumps(payload, default=str)
+
+    async with aioredis.from_url(_get_redis_url(), decode_responses=True) as r:
+        # Execution-scoped channel — frontend SSE and Node realtime listen here
+        if execution_id:
+            await r.publish(f"{_AGENT_CHANNEL_PREFIX}:{execution_id}", message)
+
+        # Broadcast channel — any agent or service subscribed to the firehose
+        await r.publish(f"{_AGENT_CHANNEL_PREFIX}:broadcast", message)
