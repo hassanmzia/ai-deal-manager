@@ -125,4 +125,28 @@
   [data-no-transition], img, video, svg {
     transition: none !important;
   }
+
+  /* ── Mobile touch improvements ──────────────────────────────────────────── */
+
+  /* Eliminate 300ms tap delay on mobile browsers */
+  button, a, input, select, textarea, [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Minimum 44px touch targets on mobile for buttons and interactive elements */
+  @media (max-width: 767px) {
+    button, [role="button"] {
+      min-height: 2.75rem; /* 44px */
+    }
+    input, select, textarea {
+      min-height: 2.75rem;
+      font-size: 1rem; /* Prevent iOS auto-zoom on focus (requires ≥16px) */
+    }
+  }
+
+  /* Safe-area insets for notch/island devices */
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
 }

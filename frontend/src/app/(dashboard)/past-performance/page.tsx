@@ -667,9 +667,9 @@ export default function PastPerformancePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Past Performance</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Past Performance</h1>
           <p className="text-muted-foreground">
             Manage and search your contract history for proposals
           </p>
@@ -735,7 +735,7 @@ export default function PastPerformancePage() {
             <select
               value={agencyFilter}
               onChange={(e) => setAgencyFilter(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:h-9 sm:w-auto"
             >
               <option value="">All Agencies</option>
               {uniqueAgencies.map((a) => (
@@ -745,7 +745,7 @@ export default function PastPerformancePage() {
             <select
               value={ratingFilter}
               onChange={(e) => setRatingFilter(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:h-9 sm:w-auto"
             >
               <option value="">All Ratings</option>
               {["Exceptional", "Very Good", "Satisfactory", "Marginal", "Unsatisfactory"].map(
@@ -755,7 +755,7 @@ export default function PastPerformancePage() {
             <select
               value={domainFilter}
               onChange={(e) => setDomainFilter(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:h-9 sm:w-auto"
             >
               <option value="">All Domains</option>
               {allDomains.map((d) => (
